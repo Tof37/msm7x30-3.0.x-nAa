@@ -771,7 +771,11 @@ void __init mem_init(void)
 #ifdef CONFIG_MMU
 			MLM(CONSISTENT_BASE, CONSISTENT_END),
 #endif
+#ifdef CONFIG_MACH_ES209RA
+			MLM(VMALLOC_START, (unsigned long)VMALLOC_END),
+#else
 			MLM(VMALLOC_START, VMALLOC_END),
+#endif
 			MLM(PAGE_OFFSET, (unsigned long)high_memory),
 #ifdef CONFIG_HIGHMEM
 			MLM(PKMAP_BASE, (PKMAP_BASE) + (LAST_PKMAP) *
@@ -781,8 +785,13 @@ void __init mem_init(void)
 
 			MLK_ROUNDUP(__init_begin, __init_end),
 			MLK_ROUNDUP(_text, _etext),
+#ifdef CONFIG_MACH_ES209RA
+			MLK_ROUNDUP(_data, _edata),
+			MLK_ROUNDUP(__bss_start, __bss_stop));
+#else
 			MLK_ROUNDUP(_sdata, _edata),
 			MLK_ROUNDUP(__bss_start, __bss_stop));
+#endif
 
 #undef MLK
 #undef MLM
