@@ -410,7 +410,11 @@ __v7_setup:
 	mcr     p15, 0, r10, c3, c0, 0          @ load domain access register
 #endif
 #if defined(CONFIG_ARCH_MSM_SCORPION) && !defined(CONFIG_MSM_SMP)
-	mov     r0, #0x33
+#ifdef CONFIG_ARCH_QSD8X50
+        mov     r0, #0x77
+#else
+        mov     r0, #0x33
+#endif
 	mcr     p15, 3, r0, c15, c0, 3          @ set L2CR1
 #endif
 #if defined (CONFIG_ARCH_MSM_SCORPION)
