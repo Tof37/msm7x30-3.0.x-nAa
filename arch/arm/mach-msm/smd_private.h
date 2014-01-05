@@ -204,6 +204,10 @@ enum {
 };
 
 extern spinlock_t smem_lock;
+extern void smsm_wait_for_modem(void) __init;
+#ifdef CONFIG_CAPTURE_KERNEL
+void smsm_wait_for_modem_reset(void);
+#endif
 
 
 void smd_diag(void);
