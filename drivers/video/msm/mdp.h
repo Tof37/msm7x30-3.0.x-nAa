@@ -46,6 +46,7 @@
 
 #include "msm_fb_panel.h"
 
+//#include <linux/autoconf.h>
 
 #ifdef BIT
 #undef BIT

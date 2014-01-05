@@ -45,18 +45,13 @@
 #define MSM_FB_C
 #include "msm_fb.h"
 #include "mddihosti.h"
-#include "tvenc.h"
 #include "mdp.h"
-#include "mdp4.h"
 
 #ifdef CONFIG_FB_MSM_LOGO
-#define INIT_IMAGE_FILE "/logo.rle"
+#define INIT_IMAGE_FILE "/initlogo.rle"
 extern int load_565rle_image(char *filename);
 #endif
-
-#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
 #define MSM_FB_NUM	3
-#endif
 
 static unsigned char *fbram;
 static unsigned char *fbram_phys;
@@ -722,7 +717,7 @@ int calc_fb_offset(struct msm_fb_data_type *mfd, struct fb_info *fbi, int bpp)
 	struct msm_panel_info *panel_info = &mfd->panel_info;
 	int remainder, yres, offset;
 
-    if (!align_buffer)
+if (!align_buffer)
     {
         return fbi->var.xoffset * bpp + fbi->var.yoffset * fbi->fix.line_length;
     }
@@ -1143,7 +1138,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);
 	init_completion(&mfd->refresher_comp);
-	sema_init(&mfd->sem, 1);
+	init_MUTEX(&mfd->sem);
 
 	fbram_offset = PAGE_ALIGN((int)fbram)-(int)fbram;
 	fbram += fbram_offset;
@@ -2981,8 +2976,6 @@ void msm_fb_add_device(struct platform_device *pdev)
 	if (!pdata)
 		return;
 	type = pdata->panel_info.type;
-
-#if defined MSM_FB_NUM
 	/*
 	 * over written fb_num which defined
 	 * at panel_info
@@ -2995,7 +2988,6 @@ void msm_fb_add_device(struct platform_device *pdev)
 
 	MSM_FB_INFO("setting pdata->panel_info.fb_num to %d. type: %d\n",
 			pdata->panel_info.fb_num, type);
-#endif
 	fb_num = pdata->panel_info.fb_num;
 
 	if (fb_num <= 0)
@@ -3005,9 +2997,7 @@ void msm_fb_add_device(struct platform_device *pdev)
 		printk(KERN_ERR "msm_fb: no more framebuffer info list!\n");
 		return;
 	}
-	/*
-	 * alloc panel device data
-	 */
+
 	this_dev = msm_fb_device_alloc(pdata, type, id);
 
 	if (!this_dev) {
@@ -3016,9 +3006,6 @@ void msm_fb_add_device(struct platform_device *pdev)
 		return;
 	}
 
-	/*
-	 * alloc framebuffer info + par data
-	 */
 	fbi = framebuffer_alloc(sizeof(struct msm_fb_data_type), NULL);
 	if (fbi == NULL) {
 		platform_device_put(this_dev);
@@ -3056,8 +3043,7 @@ void msm_fb_add_device(struct platform_device *pdev)
 }
 EXPORT_SYMBOL(msm_fb_add_device);
 
-int get_fb_phys_info(unsigned long *start, unsigned long *len, int fb_num,
-	int subsys_id)
+int get_fb_phys_info(unsigned long *start, unsigned long *len, int fb_num)
 {
 	struct fb_info *info;
 
@@ -3104,3 +3090,4 @@ int __init msm_fb_init(void)
 module_param(align_buffer, bool, 0644);
 
 module_init(msm_fb_init);
+

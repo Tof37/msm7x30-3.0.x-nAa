@@ -108,6 +108,8 @@ static struct platform_driver mddi_driver = {
 	.resume = mddi_resume,
 #endif
 #endif
+	.suspend = NULL,
+	.resume = NULL,
 	.shutdown = NULL,
 	.driver = {
 		   .name = "mddi",
@@ -150,7 +152,7 @@ static int mddi_on(struct platform_device *pdev)
 			  __func__, clk_rate);
 
 	if (clk_set_rate(mddi_clk, clk_rate) < 0)
-		printk(KERN_ERR "%s: clk_set_min_rate failed\n",
+		printk(KERN_ERR "%s: clk_set_rate failed\n",
 			__func__);
 
 	ret = panel_next_on(pdev);
@@ -305,7 +307,7 @@ void mddi_disable(int lock)
 	mddi_host_reg_out(PAD_CTL, 0x0);
 
 	if (clk_set_rate(mddi_clk, 0) < 0)
-		printk(KERN_ERR "%s: clk_set_min_rate failed\n", __func__);
+		printk(KERN_ERR "%s: clk_set_rate failed\n", __func__);
 
 	clk_disable(mddi_clk);
 	if (mddi_pclk)

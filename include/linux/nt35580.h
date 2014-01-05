@@ -1,26 +1,17 @@
-/*include/linux/nt35580.h
- *
- * Copyright (c) 2010 Samsung Electronics Co., Ltd.
- *              http://www.samsung.com/
- *
- * Header file for Sony LCD Panel(TFT) driver
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
-*/
-#include <linux/types.h>
+/* FeraVolt */
 
-#define SLEEPMSEC               0x1000
-#define ENDDEF                  0x2000
-#define DEFMASK         0xFF00
+void nt35580_lcd_device_add(void);
+void mddi_nt35580_lcd_display_on(void);
 
-struct s5p_tft_panel_data {
-        const u16 *seq_set;
-        const u16 *sleep_in;
-        const u16 *display_on;
-        const u16 *display_off;
-        u16 *brightness_set;
-        int pwm_reg_offset;
+#include "../../drivers/video/msm/msm_fb_panel.h"
+
+struct tmd_wvga_platform_data {
+        void (*power_on)(void);
+        void (*power_off)(void);
+        //void (*window_adjust)(u16 x1, u16 x2, u16 y1, u16 y2);
+        void (*exit_deep_standby) (void);
+        /*int dbc_on;
+        int dbc_mode;*/
+        struct msm_fb_panel_data *panel_data;
+	struct panel_data_ext *panel_ext;
 };
-

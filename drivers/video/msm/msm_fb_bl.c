@@ -100,8 +100,6 @@ void msm_fb_config_backlight(struct msm_fb_data_type *mfd)
 
 	if ((pdata) && (pdata->set_backlight)) {
 		snprintf(name, sizeof(name), "msmfb_bl%d", mfd->index);
-		props.max_brightness = FB_BACKLIGHT_LEVELS - 1;
-		props.brightness = FB_BACKLIGHT_LEVELS - 1;
 		pbd =
 		    backlight_device_register(name, fbi->dev, mfd,
 					      &msm_fb_bl_ops, &props);

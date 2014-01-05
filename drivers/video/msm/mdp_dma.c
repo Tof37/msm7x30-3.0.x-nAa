@@ -78,12 +78,14 @@
 #include "msm_fb.h"
 #include "mddihost.h"
 
+//#include <linux/autoconf.h>
 
 #ifdef CONFIG_FB_MSM_MDDI_TMD_NT35580
-#include "mddi_tmd_nt35580.h"
+#include "linux/nt35580.h"
 #endif
 
 /* SEMC added. Todo: Remove. For temporary patch in mdp_dma2_update_lcd */
+//#include <linux/autoconf.h>
 
 static uint32 mdp_last_dma2_update_width;
 static uint32 mdp_last_dma2_update_height;
@@ -93,7 +95,7 @@ static uint32 mdp_curr_dma2_update_height;
 ktime_t mdp_dma2_last_update_time = { 0 };
 
 int mdp_lcd_rd_cnt_offset_slow = 20;
-int mdp_lcd_rd_cnt_offset_fast = 20;
+int mdp_lcd_rd_cnt_offset_fast = 40;
 int mdp_vsync_usec_wait_line_too_short = 5;
 uint32 mdp_dma2_update_time_in_usec;
 uint32 mdp_total_vdopkts;
@@ -559,14 +561,14 @@ void mdp_set_dma_pan_info(struct fb_info *info, struct mdp_dirty_region *dirty,
 			  boolean sync)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
-    struct fb_info *fbi = mfd->fbi;
+	struct fb_info *fbi = mfd->fbi;
 	MDPIBUF *iBuf;
 	int bpp = info->var.bits_per_pixel / 8;
 
 	down(&mfd->sem);
 	iBuf = &mfd->ibuf;
 	iBuf->buf = (uint8 *) info->fix.smem_start;
-    iBuf->buf += calc_fb_offset(mfd, fbi, bpp);
+	iBuf->buf += calc_fb_offset(mfd, fbi, bpp);
 
 	iBuf->ibuf_width = info->var.xres_virtual;
 	iBuf->bpp = bpp;

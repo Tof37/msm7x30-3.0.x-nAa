@@ -77,13 +77,11 @@
 
 #include "mdp.h"
 #include "msm_fb.h"
-#ifdef CONFIG_FB_MSM_MDP40
-#include "mdp4.h"
-#endif
 
+//#include <linux/autoconf.h>
 
 #ifdef CONFIG_FB_MSM_MDDI_TMD_NT35580
-#include "mddi_tmd_nt35580.h"
+#include "linux/nt35580.h"
 #endif
 
 static struct clk *mdp_clk;
@@ -718,24 +716,24 @@ static void mdp_drv_init(void)
 
 	/* initialize semaphore */
 	init_completion(&mdp_ppp_comp);
-	sema_init(&mdp_ppp_mutex, 1);
-	sema_init(&mdp_pipe_ctrl_mutex, 1);
+	init_MUTEX(&mdp_ppp_mutex);
+	init_MUTEX(&mdp_pipe_ctrl_mutex);
 
 	dma2_data.busy = FALSE;
 	dma2_data.waiting = FALSE;
 	init_completion(&dma2_data.comp);
-	sema_init(&dma2_data.mutex, 1);
+	init_MUTEX(&dma2_data.mutex);
 	mutex_init(&dma2_data.ov_mutex);
 
 	dma3_data.busy = FALSE;
 	dma3_data.waiting = FALSE;
 	init_completion(&dma3_data.comp);
-	sema_init(&dma3_data.mutex, 1);
+	init_MUTEX(&dma3_data.mutex);
 
 	dma_s_data.busy = FALSE;
 	dma_s_data.waiting = FALSE;
 	init_completion(&dma_s_data.comp);
-	sema_init(&dma3_data.mutex, 1);
+	init_MUTEX(&dma_s_data.mutex);
 
 	dma_e_data.busy = FALSE;
 	dma_e_data.waiting = FALSE;
