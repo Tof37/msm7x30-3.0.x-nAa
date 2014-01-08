@@ -105,6 +105,7 @@ static inline void msm_iommu_unmap_extra(struct iommu_domain *domain,
 						unsigned long page_size)
 {
 }
+
 #endif
 
 #endif

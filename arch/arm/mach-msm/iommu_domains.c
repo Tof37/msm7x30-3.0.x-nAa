@@ -234,7 +234,6 @@ void msm_iommu_unmap_extra(struct iommu_domain *domain,
 	}
 }
 
-
 struct iommu_domain *msm_get_iommu_domain(int domain_num)
 {
 	if (domain_num >= 0 && domain_num < MAX_DOMAINS)
