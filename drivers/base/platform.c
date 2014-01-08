@@ -258,7 +258,7 @@ int platform_device_add(struct platform_device *pdev)
 	else
 		dev_set_name(&pdev->dev, "%s", pdev->name);
 
-	printk("%s ADDING DEVICE %s\n", __func__, pdev->name);
+	//printk("%s ADDING DEVICE %s\n", __func__, pdev->name);
 
 	for (i = 0; i < pdev->num_resources; i++) {
 		struct resource *p, *r = &pdev->resource[i];
@@ -266,7 +266,7 @@ int platform_device_add(struct platform_device *pdev)
 		if (r->name == NULL)
 			r->name = dev_name(&pdev->dev);
 
-        printk("%s adding resource %s %d\n", __func__, r->name, r->start);
+        //printk("%s adding resource %s %d\n", __func__, r->name, r->start);
 
 		p = r->parent;
 		if (!p) {
