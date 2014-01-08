@@ -743,25 +743,24 @@ static void tmd_wvga_lcd_power_on(void)
 {
 	int rc = 0;
 
-	local_irq_enable();
+	local_irq_disable();
 
 	rc = vreg_enable(vreg_gp2);
 	if (rc) {
-		local_irq_disable();
+		local_irq_enable();
 		printk(KERN_ERR"%s:vreg_enable(gp2)err. rc=%d\n", __func__, rc);
 		return;
 	}
 	rc = vreg_enable(vreg_mmc);
 	if (rc) {
-		local_irq_disable();
+		local_irq_enable();
 		printk(KERN_ERR"%s:vreg_enable(mmc)err. rc=%d\n", __func__, rc);
 		return;
 	}
-	local_irq_disable();
-
-	msleep(50);
+	local_irq_enable();
+	msleep(45);
 	gpio_set_value(NT35580_GPIO_XRST, 1);
-	msleep(10);
+	msleep(9);
 	gpio_set_value(NT35580_GPIO_XRST, 0);
 	msleep(1);
 	gpio_set_value(NT35580_GPIO_XRST, 1);
@@ -771,12 +770,11 @@ static void tmd_wvga_lcd_power_on(void)
 static void tmd_wvga_lcd_power_off(void)
 {
 	gpio_set_value(NT35580_GPIO_XRST, 0);
-	msleep(10);
-
-	local_irq_enable();
+	msleep(9);
+	local_irq_disable();
 	vreg_disable(vreg_mmc);
 	vreg_disable(vreg_gp2);
-	local_irq_disable();
+	local_irq_enable();
 }
 
 static struct panel_data_ext tmd_wvga_panel_ext = {
@@ -789,30 +787,23 @@ static struct msm_fb_panel_data tmd_wvga_panel_data;
 static struct platform_device mddi_tmd_wvga_display_device = {
 	.name = "mddi_tmd_wvga",
 	.id = -1,
-	.dev = {
-		.platform_data = &tmd_wvga_panel_ext,
-	}
 };
 
 static void __init msm_mddi_tmd_fwvga_display_device_init(void)
 {
 	struct msm_fb_panel_data *panel_data = &tmd_wvga_panel_data;
-
 	printk(KERN_DEBUG "%s \n", __func__);
-
-	panel_data->panel_info.xres = 480;
 	panel_data->panel_info.yres = 854;
+        panel_data->panel_info.xres = 480;
 	panel_data->panel_info.type = MDDI_PANEL;
 	panel_data->panel_info.pdest = DISPLAY_1;
 	panel_data->panel_info.wait_cycle = 0;
 	panel_data->panel_info.bpp = 16;
-	panel_data->panel_info.clk_rate = 200000000;
-	panel_data->panel_info.clk_min =  192000000;
-	panel_data->panel_info.clk_max =  200000000;
+	panel_data->panel_info.clk_rate = 192000000;
+	panel_data->panel_info.clk_min =  190000000;
+	panel_data->panel_info.clk_max = 200000000;
 	panel_data->panel_info.fb_num = 3;
-
 	panel_data->panel_info.mddi.vdopkt = MDDI_DEFAULT_PRIM_PIX_ATTR;
-
 #ifdef CONFIG_ES209RA_DISABLE_SW_VSYNC
 	panel_data->panel_info.lcd.vsync_enable = FALSE;
 #else
@@ -823,13 +814,11 @@ static void __init msm_mddi_tmd_fwvga_display_device_init(void)
 	panel_data->panel_info.lcd.v_pulse_width = 0;
 	panel_data->panel_info.lcd.hw_vsync_mode = TRUE;
 	panel_data->panel_info.lcd.vsync_notifier_period = 0;
-
-	panel_data->panel_info.lcd.refx100 = 7468;
-
+	panel_data->panel_info.lcd.refx100 = 100000000 / 16766;
+	panel_data->panel_info.width = 51;
+	panel_data->panel_info.height = 89;
 	panel_data->panel_ext = &tmd_wvga_panel_ext;
-
-	mddi_tmd_wvga_display_device.dev.platform_data =
-						&tmd_wvga_panel_data;
+	mddi_tmd_wvga_display_device.dev.platform_data = &tmd_wvga_panel_data;
 
 	vreg_gp2 = vreg_get(NULL, "gp2");
 	if (IS_ERR(vreg_gp2)) {
@@ -2238,7 +2227,6 @@ __setup_param("hwversion=", es209ra_hw_version_setup_1, es209ra_hw_version_setup
 __setup_param("semcandroidboot.hwversion=", es209ra_hw_version_setup_2, es209ra_hw_version_setup, 0);
 int get_predecode_repair_cache(void);
 int set_predecode_repair_cache(void);
-void smsm_wait_for_modem(void) __init;
 static void __init es209ra_init(void)
 {
 	smsm_wait_for_modem();
