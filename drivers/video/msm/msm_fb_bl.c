@@ -89,20 +89,20 @@ static struct backlight_ops msm_fb_bl_ops = {
 
 void msm_fb_config_backlight(struct msm_fb_data_type *mfd)
 {
-	struct msm_fb_panel_data *pdata;
-	struct backlight_device *pbd;
-	struct fb_info *fbi;
-	char name[16];
-	struct backlight_properties props;
+        struct msm_fb_panel_data *pdata;
+        struct backlight_device *pbd;
+        struct fb_info *fbi;
+        char name[16];
+        struct backlight_properties props;
 
-	fbi = mfd->fbi;
-	pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
+        fbi = mfd->fbi;
+        pdata = (struct msm_fb_panel_data *)mfd->pdev->dev.platform_data;
 
-	if ((pdata) && (pdata->set_backlight)) {
-		snprintf(name, sizeof(name), "msmfb_bl%d", mfd->index);
-		pbd =
-		    backlight_device_register(name, fbi->dev, mfd,
-					      &msm_fb_bl_ops, &props);
+        if ((pdata) && (pdata->set_backlight)) {
+                snprintf(name, sizeof(name), "msmfb_bl%d", mfd->index);
+                pbd =
+                    backlight_device_register(name, fbi->dev, mfd,
+                                              &msm_fb_bl_ops, &props);
 		if (!IS_ERR(pbd)) {
 			fbi->bl_dev = pbd;
 			fb_bl_default_curve(fbi,

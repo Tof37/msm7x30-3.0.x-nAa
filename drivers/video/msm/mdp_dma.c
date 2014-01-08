@@ -78,14 +78,9 @@
 #include "msm_fb.h"
 #include "mddihost.h"
 
-//#include <linux/autoconf.h>
-
 #ifdef CONFIG_FB_MSM_MDDI_TMD_NT35580
 #include "linux/nt35580.h"
 #endif
-
-/* SEMC added. Todo: Remove. For temporary patch in mdp_dma2_update_lcd */
-//#include <linux/autoconf.h>
 
 static uint32 mdp_last_dma2_update_width;
 static uint32 mdp_last_dma2_update_height;

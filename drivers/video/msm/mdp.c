@@ -78,7 +78,6 @@
 #include "mdp.h"
 #include "msm_fb.h"
 
-//#include <linux/autoconf.h>
 
 #ifdef CONFIG_FB_MSM_MDDI_TMD_NT35580
 #include "linux/nt35580.h"
