@@ -136,6 +136,12 @@ config MSM_GEMINI
 	---help---
 	  Enable support for Gemini Jpeg Engine
 
+config SEMC_IMX046_CAMERA
+        bool "Sensor semc_imx046_camera"
+        depends on MSM_CAMERA
+        ---help---
+          semc imx046 camera
+
 config MSM_VPE
 	tristate "Qualcomm MSM Video Pre-processing Engine support"
 	depends on MSM_CAMERA && (ARCH_MSM7X30 || ARCH_MSM8X60)
