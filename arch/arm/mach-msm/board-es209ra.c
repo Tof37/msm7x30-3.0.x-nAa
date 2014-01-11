@@ -117,6 +117,12 @@
 #define MSM_PMEM_SF_SIZE	0x1700000
 #define PMEM_KERNEL_EBI1_SIZE	0x00028000
 
+#define MSM_EBI1_BANK0_BASE	0x20000000
+#define MSM_EBI1_BANK0_SIZE	0x0E800000
+
+#define MSM_EBI1_BANK1_BASE 	0x30000000
+#define MSM_EBI1_BANK1_SIZE	0x0B700000
+
 #define MSM_SHARED_RAM_PHYS	0x00100000
 
 #define MSM_SMI_BASE		0x00000000
@@ -459,6 +465,13 @@ static struct msm_usb_host_platform_data msm_usb_host2_pdata = {
 };
 #endif
 
+static struct android_pmem_platform_data android_pmem_kernel_ebi1_pdata = {
+	.name = PMEM_KERNEL_EBI1_DATA_NAME,
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,	
+	.cached = 0,
+	.memory_type = MEMTYPE_EBI1,
+};
+
 static struct android_pmem_platform_data android_pmem_pdata = {
 	.name = "pmem",
 	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
@@ -471,6 +484,7 @@ static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
 	.cached = 0,
 	.memory_type = MEMTYPE_EBI1,
+
 };
 
 static struct android_pmem_platform_data android_pmem_audio_pdata = {
@@ -496,6 +510,12 @@ static struct platform_device android_pmem_audio_device = {
         .name = "android_pmem",
         .id = 2,
         .dev = { .platform_data = &android_pmem_audio_pdata },
+};
+
+static struct platform_device android_pmem_kernel_ebi1_device = {
+	.name = "android_pmem",
+	.id = 3,
+	.dev = { .platform_data = &android_pmem_kernel_ebi1_pdata },
 };
 
 static struct resource msm_fb_resources[] = {
@@ -1654,6 +1674,7 @@ static struct platform_device *devices[] __initdata = {
 	&msm_fb_device,
 	&msm_device_smd,
 	&msm_device_dmov,
+	&android_pmem_kernel_ebi1_device,
 	&android_pmem_device,
 	&android_pmem_adsp_device,
 	&android_pmem_audio_device,
@@ -2284,6 +2305,32 @@ static void __init es209ra_allocate_memory_regions(void)
 	void *addr;
 	unsigned long size;
 
+	size = pmem_kernel_ebi1_size;
+	if (size) {
+		addr = alloc_bootmem_align(size, 0x100000);
+		android_pmem_kernel_ebi1_pdata.size = size;
+		pr_info("allocating %lu bytes at %p (%lx physical) for kernel"
+			" ebi1 pmem arena\n", size, addr, __pa(addr));
+	}
+
+	size = pmem_mdp_size;
+        if (size) {
+                addr = alloc_bootmem(size);
+                android_pmem_pdata.start = __pa(addr);
+                android_pmem_pdata.size = size;
+                pr_info("allocating %lu bytes at %p (%lx physical) for mdp "
+                        "pmem arena\n", size, addr, __pa(addr));
+        }
+
+        size = pmem_adsp_size;
+        if (size) {
+                addr = alloc_bootmem(size);
+                android_pmem_adsp_pdata.start = __pa(addr);
+                android_pmem_adsp_pdata.size = size;
+                pr_info("allocating %lu bytes at %p (%lx physical) for adsp "
+                        "pmem arena\n", size, addr, __pa(addr));
+        }
+
 	size = fb_size ? : MSM_FB_SIZE;
 	addr = alloc_bootmem_align(size, 0x1000);
 	msm_fb_resources[0].start = __pa(addr);
@@ -2365,14 +2412,12 @@ static void __init es209ra_reserve(void)
 static void __init es209ra_fixup(struct machine_desc *desc, struct tag *tags,
                                char **cmdline, struct meminfo *mi)
 {
-	mi->nr_banks=2;
+	mi->nr_banks = 2;
 	mi->bank[0].start = PHYS_OFFSET;
-	//mi->bank[0].node = PHYS_TO_NID(mi->bank[0].start);
-	mi->bank[0].size = (232*1024*1024);
+	mi->bank[0].size = MSM_EBI1_BANK0_SIZE;
+	mi->bank[1].start = MSM_EBI1_BANK1_BASE;
+	mi->bank[1].size = MSM_EBI1_BANK1_SIZE;
 
-	mi->bank[1].start = 0x30000000;
-	mi->bank[1].size = (127*1024*1024);
-	//mi->bank[1].node = PHYS_TO_NID(mi->bank[1].start);
 }
 
 static void __init es209ra_map_io(void)
