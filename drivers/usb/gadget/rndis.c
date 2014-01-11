@@ -161,9 +161,11 @@ static const u32 oid_supported_list[] =
 
 /* HACK: copied from net/core/dev.c to replace dev_get_stats since
  * dev_get_stats cannot be called from atomic context */
+
 static void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
 				    const struct net_device_stats *netdev_stats)
 {
+
 #if BITS_PER_LONG == 64
 	BUILD_BUG_ON(sizeof(*stats64) != sizeof(*netdev_stats));
 	memcpy(stats64, netdev_stats, sizeof(*stats64));
@@ -177,6 +179,7 @@ static void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
 	for (i = 0; i < n; i++)
 		dst[i] = src[i];
 #endif
+
 }
 
 /* NDIS Functions */

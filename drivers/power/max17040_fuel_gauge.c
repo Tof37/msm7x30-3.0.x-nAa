@@ -270,11 +270,11 @@ static int max17040_get_battery_property(struct power_supply *psy,
 	return res;
 }
 
-#define MAX17040_BATTERY_ATTR(_name) 						\
-{ 										\
-	.attr = { .name = #_name, .mode = S_IRUGO }, 				\
-	.show = max17040_show_property, 					\
-	.store = NULL, 								\
+#define MAX17040_BATTERY_ATTR(_name)                                                 \
+{                                                                                 \
+        .attr = { .name = #_name, .mode = S_IRUGO },                                 \
+        .show = max17040_show_property,                                         \
+        .store = NULL,                                                                 \
 }
 
 static struct device_attribute max17040_attrs[] = {

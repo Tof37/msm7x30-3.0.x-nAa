@@ -57,7 +57,7 @@
 #include <mach/rpc_server_handset.h>
 #include <mach/socinfo.h>
 #ifdef CONFIG_MAX17040_FUELGAUGE
-#include <linux/max17040_es209ra.h>
+#include <linux/max17040.h>
 #include <mach/semc_battery_data.h>
 #endif
 #ifdef CONFIG_SENSORS_AKM8973
@@ -1157,12 +1157,12 @@ static struct msm_acpu_clock_platform_data qsd8x50_clock_data = {
 };*/
 
 /* Driver(s) to be notified upon change in bdata */
-static char *bdata_supplied_to[] = {
+/*static char *bdata_supplied_to[] = {
 	MAX17040_NAME,
-};
+};*/
 
 #ifdef CONFIG_MAX17040_FUELGAUGE
-static struct semc_battery_platform_data semc_battery_platform_data = {
+/*static struct semc_battery_platform_data semc_battery_platform_data = {
 	.supplied_to = bdata_supplied_to,
 	.num_supplicants = ARRAY_SIZE(bdata_supplied_to),
 };
@@ -1207,7 +1207,9 @@ static struct max17040_platform_data max17040_platform_data = {
 		.temp_div = 1000,
 	},
 	.chg_max_temp = 550,
-	.chg_min_temp = 50,
+	.chg_min_temp = 50,*/
+static struct max17040_i2c_platform_data max17040_platform_data = {
+	.data = &max17040_dev_data
 };
 #endif
 
@@ -1289,7 +1291,7 @@ static struct i2c_board_info msm_i2c_board_info[] __initdata = {
 	},
 #ifdef CONFIG_MAX17040_FUELGAUGE
 	{
-		I2C_BOARD_INFO(MAX17040_NAME, 0x6C >> 1),
+		I2C_BOARD_INFO("max17040_fuel_gauge", 0x36),
 		.platform_data = &max17040_platform_data,
 	},
 #endif
@@ -1627,7 +1629,7 @@ static int msm_hsusb_ldo_enable(int enable);
 
 /* Driver(s) to be notified upon change in USB */
 static char *hsusb_chg_supplied_to[] = {
-	MAX17040_NAME,
+	//MAX17040_NAME,
 };
 
 static struct msm_otg_platform_data msm_otg_pdata = {
@@ -1695,7 +1697,7 @@ static struct platform_device *devices[] __initdata = {
 #ifdef CONFIG_PMIC_TIME
 	&pmic_time_device,
 #endif
-	&bdata_driver,
+	//&bdata_driver,
 	//&msm_batt_device,
 };
 
@@ -2229,7 +2231,7 @@ int get_predecode_repair_cache(void);
 int set_predecode_repair_cache(void);
 static void __init es209ra_init(void)
 {
-	smsm_wait_for_modem();
+	//smsm_wait_for_modem();
 
 	if (socinfo_init() < 0)
 		printk(KERN_ERR "%s: socinfo_init() failed!\n", __func__);

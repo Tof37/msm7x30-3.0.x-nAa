@@ -761,26 +761,21 @@ static ssize_t fsg_show_file(struct device *dev, struct device_attribute *attr,
 static ssize_t fsg_store_ro(struct device *dev, struct device_attribute *attr,
 			    const char *buf, size_t count)
 {
-	ssize_t		rc;
+	ssize_t		rc = count;
 	struct fsg_lun	*curlun = fsg_lun_from_dev(dev);
 	struct rw_semaphore	*filesem = dev_get_drvdata(dev);
-	unsigned	ro;
+	int	i;
 
-	rc = kstrtouint(buf, 2, &ro);
-	if (rc)
-		return rc;
+        if (sscanf(buf, "%d", &i) != 1)
+		return -EINVAL;
 
-	/*
-	 * Allow the write-enable status to change only while the
-	 * backing file is closed.
-	 */
 	down_read(filesem);
 	if (fsg_lun_is_open(curlun)) {
 		LDBG(curlun, "read-only status change prevented\n");
 		rc = -EBUSY;
 	} else {
-		curlun->ro = ro;
-		curlun->initially_ro = ro;
+		curlun->ro = !!i;
+		curlun->initially_ro = !!i;
 		LDBG(curlun, "read-only status set to %d\n", curlun->ro);
 		rc = count;
 	}
@@ -793,18 +788,16 @@ static ssize_t fsg_store_nofua(struct device *dev,
 			       const char *buf, size_t count)
 {
 	struct fsg_lun	*curlun = fsg_lun_from_dev(dev);
-	unsigned	nofua;
-	int		ret;
+	int	        nofua;
 
-	ret = kstrtouint(buf, 2, &nofua);
-	if (ret)
-		return ret;
+	if (sscanf(buf, "%d", &nofua) != 1)
+                return -EINVAL;
 
 	/* Sync data when switching from async mode to sync */
 	if (!nofua && curlun->nofua)
 		fsg_lun_fsync_sub(curlun);
 
-	curlun->nofua = nofua;
+	curlun->nofua = !!nofua;
 
 	return count;
 }
