@@ -998,7 +998,7 @@ void __init msm_camera_register_device(void *res, uint32_t num,
 static struct resource kgsl_3d0_resources[] = {
 	{
 		.name  = KGSL_3D0_REG_MEMORY,
-		.start = 0xA0000000,
+		.start = 0xA0000000, /* 3D GRP address */
 		.end = 0xA001ffff,
 		.flags = IORESOURCE_MEM,
 	},
@@ -1011,17 +1011,27 @@ static struct resource kgsl_3d0_resources[] = {
 };
 
 static struct kgsl_device_platform_data kgsl_3d0_pdata = {
-	.pwrlevel = {
-		{
-			.gpu_freq = 0,
-			.bus_freq = 128000000,
+	.pwr_data = {
+		.pwrlevel = {
+			{
+				.gpu_freq = 192000000,
+				.bus_freq = 192000000,
+			},
+		},
+		.init_level = 0,
+		.num_levels = 1,
+		.set_grp_async = NULL,
+		.idle_timeout = HZ/5,
+		.nap_allowed = true,
+	},
+	.clk = {
+		.name = {
+			.clk = "grp_clk",
 		},
 	},
-	.init_level = 0,
-	.num_levels = 1,
-	.set_grp_async = NULL,
-	.idle_timeout = HZ/5,
-	.clk_map = KGSL_CLK_CORE | KGSL_CLK_MEM,
+	.imem_clk_name = {
+		.clk = "imem_clk",
+	},
 };
 
 struct platform_device msm_kgsl_3d0 = {
@@ -1033,4 +1043,3 @@ struct platform_device msm_kgsl_3d0 = {
 		.platform_data = &kgsl_3d0_pdata,
 	},
 };
-
