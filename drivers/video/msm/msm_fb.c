@@ -84,6 +84,8 @@ static DECLARE_DELAYED_WORK(resume_backlight_work,
                                 msm_fb_resume_backlight_work_handler);
 #endif
 
+static struct ion_client *iclient;
+
 u32 msm_fb_debug_enabled;
 /* Setting msm_fb_msg_level to 8 prints out ALL messages */
 u32 msm_fb_msg_level = 7;
@@ -111,6 +113,10 @@ static int msm_fb_resume_sub(struct msm_fb_data_type *mfd);
 static int msm_fb_ioctl(struct fb_info *info, unsigned int cmd,
                         unsigned long arg);
 static int msm_fb_mmap(struct fb_info *info, struct vm_area_struct * vma);
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+#define NUM_ALLOC 3
+#endif
+
 
 #ifdef MSM_FB_ENABLE_DBGFS
 
@@ -295,6 +301,16 @@ static int msm_fb_probe(struct platform_device *pdev)
                 }
                 MSM_FB_INFO("msm_fb_probe:  phy_Addr = 0x%x virt = 0x%x\n",
                              (int)fbram_phys, (int)fbram);
+
+                iclient = msm_ion_client_create(-1, pdev->name);
+                if (IS_ERR_OR_NULL(iclient)) {
+                        pr_err("msm_ion_client_create() return"
+                                " error, val %p\n", iclient);
+                        iclient = NULL;
+                }
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+                iclient = msm_ion_client_create(-1, pdev->name);
+#endif
 
                 msm_fb_resource_initialized = 1;
                 return 0;
@@ -3090,4 +3106,3 @@ int __init msm_fb_init(void)
 module_param(align_buffer, bool, 0644);
 
 module_init(msm_fb_init);
-

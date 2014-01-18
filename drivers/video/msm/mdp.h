@@ -37,6 +37,7 @@
 #include <linux/fb.h>
 #include <linux/hrtimer.h>
 #include <linux/msm_mdp.h>
+#include <linux/ion.h>
 
 #include <mach/hardware.h>
 #include <linux/io.h>
@@ -65,6 +66,13 @@
 #define MDPOP_SHARPENING	BIT(11) /* enable sharpening */
 #define MDPOP_BLUR		BIT(12) /* enable blur */
 #define MDPOP_FG_PM_ALPHA       BIT(13)
+
+struct mdp_buf_type {
+struct ion_handle *ihdl;
+u32 write_addr;
+u32 read_addr;
+u32 size;
+};
 
 struct mdp_table_entry {
 	uint32_t reg;
