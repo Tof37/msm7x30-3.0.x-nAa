@@ -38,7 +38,6 @@
 #include <linux/hrtimer.h>
 #include <linux/msm_mdp.h>
 #include <linux/ion.h>
-
 #include <mach/hardware.h>
 #include <linux/io.h>
 
@@ -46,6 +45,7 @@
 #include <asm/mach-types.h>
 
 #include "msm_fb_panel.h"
+
 
 #ifdef BIT
 #undef BIT
@@ -66,12 +66,13 @@
 #define MDPOP_SHARPENING	BIT(11) /* enable sharpening */
 #define MDPOP_BLUR		BIT(12) /* enable blur */
 #define MDPOP_FG_PM_ALPHA       BIT(13)
+#define MDP_ALLOC(x)  kmalloc(x, GFP_KERNEL)
 
 struct mdp_buf_type {
-struct ion_handle *ihdl;
-u32 write_addr;
-u32 read_addr;
-u32 size;
+	struct ion_handle *ihdl;
+	u32 write_addr;
+	u32 read_addr;
+	u32 size;
 };
 
 struct mdp_table_entry {
@@ -223,8 +224,8 @@ struct mdp_dma_data {
 #define MDP_DMA3_TERM 0x2
 #define MDP_PPP_TERM 0x4
 #define MDP_DMA_S_TERM 0x8
-#ifdef CONFIG_FB_MSM_MDP40
 #define MDP_DMA_E_TERM 0x10
+#ifdef CONFIG_FB_MSM_MDP40
 #define MDP_OVERLAY0_TERM 0x20
 #define MDP_OVERLAY1_TERM 0x40
 #endif
@@ -234,6 +235,7 @@ struct mdp_dma_data {
 #define ACTIVE_HIGH 0
 #define ACTIVE_LOW 1
 #define MDP_DMA_S_DONE  BIT(2)
+#define MDP_DMA_E_DONE  BIT(3)
 #define LCDC_FRAME_START    BIT(15)
 #define LCDC_UNDERFLOW      BIT(16)
 
@@ -257,6 +259,7 @@ struct mdp_dma_data {
 #define MDP_ANY_INTR_MASK (MDP_PPP_DONE| \
 			MDP_DMA_P_DONE| \
 			MDP_DMA_S_DONE| \
+			MDP_DMA_E_DONE| \
 			LCDC_UNDERFLOW| \
 			MDP_HIST_DONE| \
 			TV_ENC_UNDERRUN)
@@ -556,6 +559,7 @@ struct mdp_dma_data {
 #define DMA_AHBM_LCD_SEL_PRIMARY            0
 #define DMA_AHBM_LCD_SEL_SECONDARY          0
 #define DMA_IBUF_C3ALPHA_EN                 0
+#define DMA_BUF_FORMAT_RGB565		BIT(25)
 #define DMA_DITHER_EN                       BIT(24)	/* dma_p */
 #define DMA_DEFLKR_EN                       BIT(24)	/* dma_e */
 #define DMA_MDDI_DMAOUT_LCD_SEL_PRIMARY     0
@@ -568,7 +572,9 @@ struct mdp_dma_data {
 /*
  * MDDI Register
  */
-#define MDDI_VDO_PACKET_DESC  0x5666
+#define MDDI_VDO_PACKET_DESC_16  0x5565
+#define MDDI_VDO_PACKET_DESC	 0x5666	/* 18 bits */
+#define MDDI_VDO_PACKET_DESC_24  0x5888
 
 #ifdef CONFIG_FB_MSM_MDP40
 #define MDP_INTR_ENABLE		(msm_mdp_base + 0x0050)
@@ -670,7 +676,12 @@ int mdp_hw_cursor_update(struct fb_info *info, struct fb_cursor *cursor);
 void mdp_enable_irq(uint32 term);
 void mdp_disable_irq(uint32 term);
 void mdp_disable_irq_nolock(uint32 term);
-uint32_t mdp_get_bytes_per_pixel(uint32_t format);
+// EDIT 
+
+int mdp_get_bytes_per_pixel(uint32_t format,
+				 struct msm_fb_data_type *mfd);
+
+// uint32_t mdp_get_bytes_per_pixel(uint32_t format);
 
 #ifdef MDP_HW_VSYNC
 void mdp_hw_vsync_clk_enable(struct msm_fb_data_type *mfd);

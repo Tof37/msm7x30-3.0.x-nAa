@@ -77,10 +77,13 @@
 
 #include "mdp.h"
 #include "msm_fb.h"
+#ifdef CONFIG_FB_MSM_MDP40
+#include "mdp4.h"
+#endif
 
 
 #ifdef CONFIG_FB_MSM_MDDI_TMD_NT35580
-#include "linux/nt35580.h"
+#include "mddi_tmd_nt35580.h"
 #endif
 
 static struct clk *mdp_clk;

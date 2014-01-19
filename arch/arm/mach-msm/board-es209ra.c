@@ -84,6 +84,9 @@
 #include "es209ra_headset.h"
 #endif
 #include <linux/spi/es209ra_touch.h>
+#include <mach/msm_iomap.h>
+#include <mach/ion.h>
+#include <linux/ion.h>
 #include <asm/setup.h>
 #include "qdsp6/q6audio.h"
 #include <linux/nt35580.h>
@@ -111,10 +114,6 @@
 #define MSM_PMEM_MDP_SIZE	0x1C91000
 
 #define MSM_PMEM_ADSP_SIZE	0x2196000
-
-//#define MSM_PMEM_AUDIO_SIZE	0x80000
-
-//#define MSM_PMEM_SF_SIZE	0x1700000
 #define PMEM_KERNEL_EBI1_SIZE	0x00028000
 
 #define MSM_EBI1_BANK0_BASE	0x20000000
@@ -131,9 +130,6 @@
 #define MSM_PMEM_SMI_SIZE	0x01500000
 
 #define MSM_FB_BASE		MSM_PMEM_SMI_BASE
-#define MSM_FB_SIZE             0x500000
-
-
 
 #define MSM_PMEM_GPU0_BASE	0x00000000
 #define MSM_PMEM_GPU0_SIZE	SZ_2M
@@ -147,7 +143,16 @@
 #define PMIC_VREG_WLAN_LEVEL	2600
 #define PMIC_VREG_GP6_LEVEL	2850
 
+#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
+#define MSM_FB_SIZE     0x500000
+#else
+#define MSM_FB_SIZE     0x500000
+#endif
 #define FPGA_SDCC_STATUS	0x70000280
+
+#ifdef CONFIG_ION_MSM
+static struct platform_device ion_dev;
+#endif
 
 #ifdef CONFIG_SEMC_MSM_PMIC_VIBRATOR
 static int msm7227_platform_set_vib_voltage(u16 volt_mv)
@@ -203,12 +208,11 @@ static struct platform_device ram_console_device = {
         .resource       = ram_console_resources,
 	.dev = { .platform_data=0,}
 };
-
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-	.nluns   = 1,
-	.vendor	 = "SEMC",
-	.product = "Mass Storage",
-	.release = 0x0100,
+        .nluns = 1,
+        .vendor = "SEMC",
+        .product = "Mass Storage",
+        .release = 0x0100,
 
 };
 
@@ -484,7 +488,6 @@ static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
 	.cached = 0,
 	.memory_type = MEMTYPE_EBI1,
-
 };
 
 static struct android_pmem_platform_data android_pmem_audio_pdata = {
@@ -610,10 +613,10 @@ static struct spi_board_info msm_spi_board_info[] __initdata = {
 		.modalias	= "es209ra_touch",
 		.mode		= SPI_MODE_0,
 		.irq		= INT_ES209RA_GPIO_TOUCHPAD,
-		.platform_data  = &es209ra_touch_data,
 		.bus_num	= 0,
 		.chip_select	= 0,
-		.max_speed_hz	= 1000000,
+		.max_speed_hz	= 2000000,
+		.platform_data  = &es209ra_touch_data,
 	}
 };
 
@@ -818,10 +821,10 @@ static void __init msm_mddi_tmd_fwvga_display_device_init(void)
 	panel_data->panel_info.type = MDDI_PANEL;
 	panel_data->panel_info.pdest = DISPLAY_1;
 	panel_data->panel_info.wait_cycle = 0;
-	panel_data->panel_info.bpp = 16;
+	panel_data->panel_info.bpp = 32;
 	panel_data->panel_info.clk_rate = 192000000;
-	panel_data->panel_info.clk_min =  190000000;
-	panel_data->panel_info.clk_max = 200000000;
+	panel_data->panel_info.clk_min =  128000000;
+	panel_data->panel_info.clk_max =  192000000;
 	panel_data->panel_info.fb_num = 3;
 	panel_data->panel_info.mddi.vdopkt = MDDI_DEFAULT_PRIM_PIX_ATTR;
 #ifdef CONFIG_ES209RA_DISABLE_SW_VSYNC
@@ -838,7 +841,9 @@ static void __init msm_mddi_tmd_fwvga_display_device_init(void)
 	panel_data->panel_info.width = 51;
 	panel_data->panel_info.height = 89;
 	panel_data->panel_ext = &tmd_wvga_panel_ext;
-	mddi_tmd_wvga_display_device.dev.platform_data = &tmd_wvga_panel_data;
+
+	mddi_tmd_wvga_display_device.dev.platform_data =
+						&tmd_wvga_panel_data;
 
 	vreg_gp2 = vreg_get(NULL, "gp2");
 	if (IS_ERR(vreg_gp2)) {
@@ -1026,6 +1031,44 @@ static void __init bt_power_init(void)
 #else
 #define bt_power_init(x) do {} while (0)*/
 #endif
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+static unsigned msm_ion_sf_size = MSM_ION_SF_SIZE;
+#define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
+#endif
+
+static void __init size_pmem_devices(void)
+{
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+	if (mem_size_mb == 512) {
+		size_pmem_device(&android_pmem_adsp_pdata, MSM_PMEM_ADSP_BASE+0x10000000, pmem_adsp_size);
+		size_pmem_device(&android_pmem_pdata, MSM_PMEM_SF_BASE+0x10000000, MSM_PMEM_SF_SIZE);
+	} else {
+		size_pmem_device(&android_pmem_adsp_pdata, MSM_PMEM_ADSP_BASE, pmem_adsp_size);
+		size_pmem_device(&android_pmem_pdata, MSM_PMEM_SF_BASE, MSM_PMEM_SF_SIZE);
+	}
+	size_pmem_device(&android_pmem_smipool_pdata, MSM_PMEM_SMIPOOL_BASE, MSM_PMEM_SMIPOOL_SIZE);
+#endif 
+}
+
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+static void __init reserve_memory_for(struct android_pmem_platform_data *p)
+{
+	if (p->start == 0) {
+		pr_info("%s: reserving %lx bytes in memory pool for %s.\n", __func__, p->size, p->name);
+		qsd8x50_reserve_table[p->memory_type].size += p->size;
+	}
+}
+#endif 
+
+static void __init reserve_pmem_memory(void)
+{
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+	reserve_memory_for(&android_pmem_adsp_pdata);
+	reserve_memory_for(&android_pmem_smipool_pdata);
+	reserve_memory_for(&android_pmem_pdata);
+#endif 
+}
 
 #ifdef CONFIG_ES209RA_HEADSET
 struct es209ra_headset_platform_data es209ra_headset_data = {
@@ -1600,6 +1643,9 @@ static struct platform_device *devices[] __initdata = {
 	&msm_wlan_ar6000_pm_device,
 	&msm_fb_device,
 	&msm_device_smd,
+#ifdef CONFIG_ION_MSM
+	&ion_dev,
+#endif
 	&msm_device_dmov,
 	&android_pmem_kernel_ebi1_device,
 	&android_pmem_device,
@@ -1654,6 +1700,194 @@ static void __init es209ra_init_irq(void)
 	msm_init_irq();
 	msm_init_sirc();
 }
+
+static void __init reserve_mdp_memory(void)
+{
+#if defined(CONFIG_ANDROID_PMEM) && !defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
+	es209ra_reserve_table[mdp_pdata.mem_hid].size +=
+		 MSM_FB_WRITEBACK_SIZE;
+#endif
+}
+
+static struct memtype_reserve es209ra_reserve_table[] __initdata = {
+	[MEMTYPE_SMI] = {
+	},
+	[MEMTYPE_EBI0] = {
+		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
+	},
+	[MEMTYPE_EBI1] = {
+		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
+	},
+};
+
+
+static void __init reserve_ion_memory(void)
+{
+	es209ra_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_FW_SIZE;
+	es209ra_reserve_table[MEMTYPE_SMI].size += MSM_ION_MM_SIZE;
+	es209ra_reserve_table[MEMTYPE_SMI].size += MSM_ION_MFC_SIZE;
+	es209ra_reserve_table[MEMTYPE_EBI1].size += msm_ion_sf_size;
+	es209ra_reserve_table[MEMTYPE_EBI1].size += MSM_ION_AUDIO_SIZE;
+}
+
+static void __init reserve_mdp_memory(void);
+
+static void __init es209ra_calculate_reserve_sizes(void)
+{
+	size_pmem_devices();
+	reserve_pmem_memory();
+	reserve_ion_memory();
+	reserve_mdp_memory();
+}
+
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+#define MSM_ION_AUDIO_SIZE	MSM_PMEM_AUDIO_SIZE
+#endif
+
+#ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
+static struct android_pmem_platform_data android_pmem_smipool_pdata = {
+	.name = "pmem_smipool",
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
+	.cached = 1,
+	.map_on_demand = 1,
+};
+#endif
+
+#ifdef CONFIG_ION_MSM
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+static struct ion_cp_heap_pdata cp_mm_ion_pdata = {
+	.permission_type = IPT_TYPE_MM_CARVEOUT,
+	.align = PAGE_SIZE,
+};
+
+static struct ion_cp_heap_pdata cp_mfc_ion_pdata = {
+	.permission_type = IPT_TYPE_MFC_SHAREDMEM,
+	.align = PAGE_SIZE,
+};
+
+static struct ion_cp_heap_pdata cp_wb_ion_pdata = {
+	.permission_type = IPT_TYPE_MDP_WRITEBACK,
+	.align = PAGE_SIZE,
+};
+
+static struct ion_co_heap_pdata mm_fw_co_ion_pdata = {
+	.adjacent_mem_id = ION_CP_MM_HEAP_ID,
+	.align = SZ_128K,
+};
+
+static struct ion_co_heap_pdata co_ion_pdata = {
+	.adjacent_mem_id = INVALID_HEAP_ID,
+	.align = PAGE_SIZE,
+};
+#endif
+
+static struct ion_platform_data ion_pdata = {
+	.nr = MSM_ION_HEAP_NUM,
+	.heaps = {
+		{
+			.id	= ION_SYSTEM_HEAP_ID,
+			.type	= ION_HEAP_TYPE_SYSTEM,
+			.name	= ION_VMALLOC_HEAP_NAME,
+		},
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
+		
+		{
+			.id	= ION_CP_MM_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CP,
+			.name	= ION_MM_HEAP_NAME,
+			.size	= MSM_ION_MM_SIZE,
+			.memory_type = ION_SMI_TYPE,
+			.extra_data = (void *) &cp_mm_ion_pdata,
+		},
+		{
+			.id	= ION_MM_FIRMWARE_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_MM_FIRMWARE_HEAP_NAME,
+			.size	= MSM_ION_MM_FW_SIZE,
+			.memory_type = ION_SMI_TYPE,
+			.extra_data = (void *) &mm_fw_co_ion_pdata,
+		},
+		{
+			.id	= ION_CP_MFC_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CP,
+			.name	= ION_MFC_HEAP_NAME,
+			.size	= MSM_ION_MFC_SIZE,
+			.memory_type = ION_SMI_TYPE,
+			.extra_data = (void *) &cp_mfc_ion_pdata,
+		},
+		
+#ifdef CONFIG_TZCOM
+		{
+			.id	= ION_QSECOM_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_QSECOM_HEAP_NAME,
+			.size	= MSM_ION_QSECOM_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = (void *)&co_ion_pdata,
+		},
+#endif
+#ifndef CONFIG_MSM_IOMMU
+		{
+			.id	= ION_SF_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_SF_HEAP_NAME,
+			.size	= MSM_ION_SF_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = (void *)&co_ion_pdata,
+		},
+		{
+			.id	= ION_CP_ROTATOR_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_ROTATOR_HEAP_NAME,
+			.size	= MSM_ION_ROTATOR_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = &co_ion_pdata,
+		},
+#endif
+#ifdef CONFIG_MSM_IOMMU
+		{
+			.id	= ION_IOMMU_HEAP_ID,
+			.type	= ION_HEAP_TYPE_IOMMU,
+			.name	= ION_IOMMU_HEAP_NAME,
+		},
+#endif
+		{
+			.id	= ION_CAMERA_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_CAMERA_HEAP_NAME,
+			.base	= MSM_ION_CAMERA_BASE,
+			.size	= MSM_ION_CAMERA_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = &co_ion_pdata,
+		},
+		{
+			.id	= ION_CP_WB_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CP,
+			.name	= ION_WB_HEAP_NAME,
+			.base	= MSM_ION_WB_BASE,
+			.size	= MSM_ION_WB_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = (void *) &cp_wb_ion_pdata,
+		},
+		{
+			.id	= ION_AUDIO_HEAP_ID,
+			.type	= ION_HEAP_TYPE_CARVEOUT,
+			.name	= ION_AUDIO_HEAP_NAME,
+			.base	= MSM_ION_AUDIO_BASE,
+			.size	= MSM_ION_AUDIO_SIZE,
+			.memory_type = ION_EBI_TYPE,
+			.extra_data = (void *)&co_ion_pdata,
+		},
+#endif
+	}
+};
+
+static struct platform_device ion_dev = {
+	.name = "ion-msm",
+	.id = 1,
+	.dev = { .platform_data = &ion_pdata },
+};
+#endif
 
 static void usb_mpp_init(void)
 {
@@ -2216,13 +2450,11 @@ static void __init es209ra_init(void)
 	audio_gpio_init();
 	msm_device_i2c_init();
 	msm_qsd_spi_init();
-
 	i2c_register_board_info(0, msm_i2c_board_info,
 				ARRAY_SIZE(msm_i2c_board_info));
 	spi_register_board_info(msm_spi_board_info,
 				ARRAY_SIZE(msm_spi_board_info));
 	msm_pm_set_platform_data(msm_pm_data, ARRAY_SIZE(msm_pm_data));
-	//kgsl_phys_memory_init();
 	platform_device_register(&es209ra_keypad_device);
 	msm_mddi_tmd_fwvga_display_device_init();
 }
@@ -2276,47 +2508,6 @@ static void __init es209ra_allocate_memory_regions(void)
 	/* We still have to reserve it, though */
 	reserve_bootmem(ram_console_resources[0].start,size,0);
 #endif
-}
-
-static struct memtype_reserve es209ra_reserve_table[] __initdata = {
-	[MEMTYPE_SMI] = {
-	},
-	[MEMTYPE_EBI0] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
-	[MEMTYPE_EBI1] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
-};
-
-static void __init size_pmem_devices(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-	android_pmem_adsp_pdata.size = pmem_adsp_size;
-	android_pmem_pdata.size = pmem_mdp_size;
-	android_pmem_audio_pdata.size = pmem_audio_size;
-#endif
-}
-
-static void __init reserve_memory_for(struct android_pmem_platform_data *p)
-{
-	es209ra_reserve_table[p->memory_type].size += p->size;
-}
-
-static void __init reserve_pmem_memory(void)
-{
-#ifdef CONFIG_ANDROID_PMEM
-	reserve_memory_for(&android_pmem_adsp_pdata);
-	reserve_memory_for(&android_pmem_pdata);
-	reserve_memory_for(&android_pmem_audio_pdata);
-	es209ra_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
-#endif
-}
-
-static void __init es209ra_calculate_reserve_sizes(void)
-{
-	size_pmem_devices();
-	reserve_pmem_memory();
 }
 
 static int es209ra_paddr_to_memtype(unsigned int paddr)

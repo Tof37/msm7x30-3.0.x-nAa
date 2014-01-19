@@ -22,6 +22,9 @@
 #include "kgsl_device.h"
 
 /* An attribute for showing per-process memory statistics */
+
+struct ion_client* kgsl_client = NULL;
+
 struct kgsl_mem_entry_attribute {
 	struct attribute attr;
 	int memtype;
@@ -152,7 +155,7 @@ static struct mem_entry_stats mem_stats[] = {
 #endif
 	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_USER, user),
 #ifdef CONFIG_ION
-	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_USER, ion),
+	MEM_ENTRY_STAT(KGSL_MEM_ENTRY_ION, ion),
 #endif
 };
 

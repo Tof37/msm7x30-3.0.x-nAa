@@ -68,6 +68,18 @@ struct disp_info_type_suspend {
 	boolean panel_power_on;
 };
 
+struct msmfb_writeback_data_list {
+	struct list_head registered_entry;
+	struct list_head active_entry;
+	void *addr;
+	struct ion_handle *ihdl;
+	struct file *pmem_file;
+	struct msmfb_data buf_info;
+	struct msmfb_img img;
+	int state;
+};
+
+
 struct msm_fb_data_type {
 	__u32 key;
 	__u32 index;
@@ -146,6 +158,7 @@ struct msm_fb_data_type {
 	__u32 var_xres;
 	__u32 var_yres;
 	__u32 var_pixclock;
+	__u32 var_frame_rate;
 
 #ifdef MSM_FB_ENABLE_DBGFS
 	struct dentry *sub_dir;
@@ -157,6 +170,7 @@ struct msm_fb_data_type {
 	struct early_suspend mddi_ext_early_suspend;
 #endif
 	u32 mdp_fb_page_protection;
+	struct ion_client *iclient;
 };
 
 struct dentry *msm_fb_get_debugfs_root(void);
@@ -172,6 +186,11 @@ int calc_fb_offset(struct msm_fb_data_type *mfd, struct fb_info *fbi, int bpp);
 
 #ifdef CONFIG_FB_BACKLIGHT
 void msm_fb_config_backlight(struct msm_fb_data_type *mfd);
+#endif
+
+#ifdef CONFIG_FB_MSM_LOGO
+#define INIT_IMAGE_FILE "/initlogo.rle"
+int load_565rle_image(char *filename);
 #endif
 
 #endif /* MSM_FB_H */

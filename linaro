@@ -1,0 +1,12 @@
+rm /home/achotjan/kernel-tools-master/input/ramdisk-folder/modules/ar6000.ko
+rm /home/achotjan/kernel-tools-master/input/zImage
+rm /home/achotjan/kernel-tools-master/output/kernel.sin
+
+ARCH=arm CROSS_COMPILE=/home/achotjan/SemcDebrandEngine/prebuilts/linaro/toolchain/bin/arm-linux-androideabi- make cmx10_es209ra_defconfig
+ARCH=arm CROSS_COMPILE=/home/achotjan/SemcDebrandEngine/prebuilts/linaro/toolchain/bin/arm-linux-androideabi- make -j4
+echo '### Move ar6000.ko to ramdisk ... ###'
+cp -f /home/achotjan/hwa/kernel/semc/qsd8k_32/drivers/ar6000/ar6000.ko /home/achotjan/kernel-tools-master/input/ramdisk-folder/modules/
+echo '### Move zImage to input folder... ###'
+cp -f /home/achotjan/hwa/kernel/semc/qsd8k_32/arch/arm/boot/zImage /home/achotjan/kernel-tools-master/input/
+
+

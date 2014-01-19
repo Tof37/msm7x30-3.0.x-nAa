@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -35,18 +35,25 @@ struct ion_iommu_priv_data {
 	struct page **pages;
 	int nrpages;
 	unsigned long size;
-	struct scatterlist *iommu_sglist;
 };
+
+atomic_t v = ATOMIC_INIT(0);
 
 static int ion_iommu_heap_allocate(struct ion_heap *heap,
 				      struct ion_buffer *buffer,
 				      unsigned long size, unsigned long align,
 				      unsigned long flags)
 {
-	int ret, i;
+	int ret = 0, i;
 	struct ion_iommu_priv_data *data = NULL;
+	pgprot_t page_prot = pgprot_writecombine(PAGE_KERNEL);
+	void *ptr = NULL;
 
 	if (msm_use_iommu()) {
+		struct scatterlist *sg;
+		struct sg_table *table;
+		unsigned int i;
+
 		data = kmalloc(sizeof(*data), GFP_KERNEL);
 		if (!data)
 			return -ENOMEM;
@@ -59,26 +66,38 @@ static int ion_iommu_heap_allocate(struct ion_heap *heap,
 			ret = -ENOMEM;
 			goto err1;
 		}
-		data->iommu_sglist = vmalloc(sizeof(*data->iommu_sglist) *
-						data->nrpages);
-		if (!data->iommu_sglist) {
+
+		table = buffer->sg_table =
+				kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+
+		if (!table) {
 			ret = -ENOMEM;
 			goto err1;
 		}
+		ret = sg_alloc_table(table, data->nrpages, GFP_KERNEL);
+		if (ret)
+			goto err2;
 
-		sg_init_table(data->iommu_sglist, data->nrpages);
-
-		for (i = 0; i < data->nrpages; i++) {
-			data->pages[i] = alloc_page(GFP_KERNEL | __GFP_ZERO);
+		for_each_sg(table->sgl, sg, table->nents, i) {
+			data->pages[i] = alloc_page(GFP_KERNEL | __GFP_HIGHMEM);
 			if (!data->pages[i])
-				goto err2;
+				goto err3;
 
-			sg_set_page(&data->iommu_sglist[i], data->pages[i],
-				    PAGE_SIZE, 0);
+			sg_set_page(sg, data->pages[i], PAGE_SIZE, 0);
 		}
 
+		ptr = vmap(data->pages, data->nrpages, VM_IOREMAP, page_prot);
+		if (ptr != NULL) {
+			memset(ptr, 0, data->size);
+			dmac_flush_range(ptr, ptr + data->size);
+			vunmap(ptr);
+		} else
+			pr_err("%s: vmap() failed\n", __func__);
 
 		buffer->priv_virt = data;
+		
+		atomic_add(data->size, &v);
+		
 		return 0;
 
 	} else {
@@ -86,9 +105,11 @@ static int ion_iommu_heap_allocate(struct ion_heap *heap,
 	}
 
 
+err3:
+	sg_free_table(buffer->sg_table);
 err2:
-	vfree(data->iommu_sglist);
-	data->iommu_sglist = NULL;
+	kfree(buffer->sg_table);
+	buffer->sg_table = 0;
 
 	for (i = 0; i < data->nrpages; i++) {
 		if (data->pages[i])
@@ -111,16 +132,54 @@ static void ion_iommu_heap_free(struct ion_buffer *buffer)
 	for (i = 0; i < data->nrpages; i++)
 		__free_page(data->pages[i]);
 
-	vfree(data->iommu_sglist);
-	data->iommu_sglist = NULL;
+	
+	atomic_sub(data->size, &v);
+	
 
 	kfree(data->pages);
 	kfree(data);
 }
 
+int ion_iommu_heap_dump_size(void)
+{
+	int ret = atomic_read(&v);
+	return ret;
+}
+
+static int ion_iommu_print_debug(struct ion_heap *heap, struct seq_file *s,
+				    const struct rb_root *mem_map)
+{
+	seq_printf(s, "Total bytes currently allocated: %d (%x)\n",
+		atomic_read(&v), atomic_read(&v));
+
+	if (mem_map) {
+		struct rb_node *n;
+
+		seq_printf(s, "\nBuffer Info\n");
+		seq_printf(s, "%16.s %16.s %14.s\n",
+			   "client", "creator", "size (hex)");
+
+		for (n = rb_first(mem_map); n; n = rb_next(n)) {
+			struct mem_map_data *data =
+					rb_entry(n, struct mem_map_data, node);
+			const char *client_name = "(null)";
+			const char *creator_name = "(null)";
+
+			if (data->client_name)
+				client_name = data->client_name;
+
+			if (data->creator_name)
+				creator_name = data->creator_name;
+
+			seq_printf(s, "%16.s %16.s %14lu (%lx)\n",
+				   client_name, creator_name, data->size, data->size);
+		}
+	}
+	return 0;
+}
+
 void *ion_iommu_heap_map_kernel(struct ion_heap *heap,
-				   struct ion_buffer *buffer,
-				   unsigned long flags)
+				struct ion_buffer *buffer)
 {
 	struct ion_iommu_priv_data *data = buffer->priv_virt;
 	pgprot_t page_prot = PAGE_KERNEL;
@@ -128,7 +187,7 @@ void *ion_iommu_heap_map_kernel(struct ion_heap *heap,
 	if (!data)
 		return NULL;
 
-	if (!ION_IS_CACHED(flags))
+	if (!ION_IS_CACHED(buffer->flags))
 		page_prot = pgprot_noncached(page_prot);
 
 	buffer->vaddr = vmap(data->pages, data->nrpages, VM_IOREMAP, page_prot);
@@ -147,7 +206,7 @@ void ion_iommu_heap_unmap_kernel(struct ion_heap *heap,
 }
 
 int ion_iommu_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
-			       struct vm_area_struct *vma, unsigned long flags)
+			       struct vm_area_struct *vma)
 {
 	struct ion_iommu_priv_data *data = buffer->priv_virt;
 	int i;
@@ -155,16 +214,12 @@ int ion_iommu_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 	if (!data)
 		return -EINVAL;
 
-	if (!ION_IS_CACHED(flags))
+	if (!ION_IS_CACHED(buffer->flags))
 		vma->vm_page_prot = pgprot_writecombine(vma->vm_page_prot);
 
 	curr_addr = vma->vm_start;
 	for (i = 0; i < data->nrpages && curr_addr < vma->vm_end; i++) {
 		if (vm_insert_page(vma, curr_addr, data->pages[i])) {
-			/*
-			 * This will fail the mmap which will
-			 * clean up the vma space properly.
-			 */
 			return -EINVAL;
 		}
 		curr_addr += PAGE_SIZE;
@@ -183,7 +238,6 @@ int ion_iommu_heap_map_iommu(struct ion_buffer *buffer,
 	struct iommu_domain *domain;
 	int ret = 0;
 	unsigned long extra;
-	struct ion_iommu_priv_data *buffer_data = buffer->priv_virt;
 	int prot = IOMMU_WRITE | IOMMU_READ;
 	prot |= ION_IS_CACHED(flags) ? IOMMU_CACHE : 0;
 
@@ -192,13 +246,12 @@ int ion_iommu_heap_map_iommu(struct ion_buffer *buffer,
 	data->mapped_size = iova_length;
 	extra = iova_length - buffer->size;
 
-	data->iova_addr = msm_allocate_iova_address(domain_num, partition_num,
-						data->mapped_size, align);
+	ret = msm_allocate_iova_address(domain_num, partition_num,
+						data->mapped_size, align,
+						&data->iova_addr);
 
-	if (!data->iova_addr) {
-		ret = -ENOMEM;
+	if (ret)
 		goto out;
-	}
 
 	domain = msm_get_iommu_domain(domain_num);
 
@@ -208,7 +261,8 @@ int ion_iommu_heap_map_iommu(struct ion_buffer *buffer,
 	}
 
 	ret = iommu_map_range(domain, data->iova_addr,
-			      buffer_data->iommu_sglist, buffer->size, prot);
+			      buffer->sg_table->sgl,
+			      buffer->size, prot);
 	if (ret) {
 		pr_err("%s: could not map %lx in domain %p\n",
 			__func__, data->iova_addr, domain);
@@ -300,16 +354,19 @@ static int ion_iommu_cache_ops(struct ion_heap *heap, struct ion_buffer *buffer,
 	return 0;
 }
 
-static struct scatterlist *ion_iommu_heap_map_dma(struct ion_heap *heap,
+static struct sg_table *ion_iommu_heap_map_dma(struct ion_heap *heap,
 					      struct ion_buffer *buffer)
 {
-	struct ion_iommu_priv_data *data = buffer->priv_virt;
-	return data->iommu_sglist;
+	return buffer->sg_table;
 }
 
 static void ion_iommu_heap_unmap_dma(struct ion_heap *heap,
 				 struct ion_buffer *buffer)
 {
+	if (buffer->sg_table)
+		sg_free_table(buffer->sg_table);
+	kfree(buffer->sg_table);
+	buffer->sg_table = 0;
 }
 
 static struct ion_heap_ops iommu_heap_ops = {
@@ -323,6 +380,7 @@ static struct ion_heap_ops iommu_heap_ops = {
 	.cache_op = ion_iommu_cache_ops,
 	.map_dma = ion_iommu_heap_map_dma,
 	.unmap_dma = ion_iommu_heap_unmap_dma,
+	.print_debug = ion_iommu_print_debug,
 };
 
 struct ion_heap *ion_iommu_heap_create(struct ion_platform_heap *heap_data)
