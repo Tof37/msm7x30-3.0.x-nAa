@@ -676,7 +676,7 @@ static int mddi_nt35580_lcd_lcd_off(struct platform_device *pdev)
 	return 0;
 }
 
-static int __init mddi_nt35580_lcd_lcd_probe(struct platform_device *pdev)
+static int __ref mddi_nt35580_lcd_lcd_probe(struct platform_device *pdev)
 {
 	struct msm_fb_panel_data *panel_data;
 
