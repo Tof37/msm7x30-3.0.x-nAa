@@ -120,7 +120,7 @@
 #define MSM_EBI1_BANK0_SIZE	0x0E800000
 
 #define MSM_EBI1_BANK1_BASE 	0x30000000
-#define MSM_EBI1_BANK1_SIZE	0x0B700000
+#define MSM_EBI1_BANK1_SIZE	0x0C400000
 
 #define MSM_SHARED_RAM_PHYS	0x00100000
 
@@ -134,8 +134,8 @@
 #define MSM_PMEM_GPU0_BASE	0x00000000
 #define MSM_PMEM_GPU0_SIZE	SZ_2M
 
-#define MSM_PMEM_SMIPOOL_BASE	(MSM_FB_BASE + MSM_FB_SIZE)
-#define MSM_PMEM_SMIPOOL_SIZE	(MSM_PMEM_SMI_SIZE - MSM_FB_SIZE)
+/*#define MSM_PMEM_SMIPOOL_BASE	(MSM_FB_BASE + MSM_FB_SIZE)
+#define MSM_PMEM_SMIPOOL_SIZE	(MSM_PMEM_SMI_SIZE - MSM_FB_SIZE)*/
 
 #define MSM_RAM_CONSOLE_START   0x38000000 - MSM_RAM_CONSOLE_SIZE
 #define MSM_RAM_CONSOLE_SIZE    128 * SZ_1K
@@ -495,6 +495,19 @@ static struct android_pmem_platform_data android_pmem_audio_pdata = {
         .allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
         .cached = 0,
         .memory_type = MEMTYPE_EBI1,
+};
+
+static struct android_pmem_platform_data android_pmem_smipool_pdata = {
+	.name = "pmem_smipool",
+	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
+	.cached = 1,
+	.map_on_demand = 1,
+};
+
+static struct platform_device android_pmem_smipool_device = {
+        .name = "android_pmem",
+        .id = 7,
+        .dev = { .platform_data = &android_pmem_smipool_pdata },
 };
 
 static struct platform_device android_pmem_device = {
@@ -1056,7 +1069,7 @@ static void __init reserve_memory_for(struct android_pmem_platform_data *p)
 {
 	if (p->start == 0) {
 		pr_info("%s: reserving %lx bytes in memory pool for %s.\n", __func__, p->size, p->name);
-		qsd8x50_reserve_table[p->memory_type].size += p->size;
+		es209ra_reserve_table[p->memory_type].size += p->size;
 	}
 }
 #endif 
@@ -1648,8 +1661,13 @@ static struct platform_device *devices[] __initdata = {
 #endif
 	&msm_device_dmov,
 	&android_pmem_kernel_ebi1_device,
+#ifdef CONFIG_ANDROID_PMEM
+#ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
 	&android_pmem_device,
 	&android_pmem_adsp_device,
+	&android_pmem_smipool_device,
+#endif
+#endif
 	&android_pmem_audio_device,
 	&msm_device_nand,
 	&msm_device_i2c,
@@ -1703,21 +1721,37 @@ static void __init es209ra_init_irq(void)
 
 static void __init reserve_mdp_memory(void)
 {
-#if defined(CONFIG_ANDROID_PMEM) && !defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
+/*#if defined(CONFIG_ANDROID_PMEM) && !defined(CONFIG_MSM_MULTIMEDIA_USE_ION)
 	es209ra_reserve_table[mdp_pdata.mem_hid].size +=
 		 MSM_FB_WRITEBACK_SIZE;
-#endif
+#endif*/
 }
 
 static struct memtype_reserve es209ra_reserve_table[] __initdata = {
-	[MEMTYPE_SMI] = {
-	},
-	[MEMTYPE_EBI0] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
-	[MEMTYPE_EBI1] = {
-		.flags	=	MEMTYPE_FLAGS_1M_ALIGN,
-	},
+	/* Kernel SMI memory pool for video core, used for firmware */
+        /* and encoder, decoder scratch buffers */
+        /* Kernel SMI memory pool should always precede the user space */
+        /* SMI memory pool, as the video core will use offset address */
+        /* from the Firmware base */
+        [MEMTYPE_SMI_KERNEL] = {
+                .start  =       KERNEL_SMI_BASE,
+                .limit  =       KERNEL_SMI_SIZE,
+                .size   =       KERNEL_SMI_SIZE,
+                .flags  =       MEMTYPE_FLAGS_FIXED,
+        },
+        /* User space SMI memory pool for video core */
+        /* used for encoder, decoder input & output buffers  */
+        [MEMTYPE_SMI] = {
+                .start  =       USER_SMI_BASE,
+                .limit  =       USER_SMI_SIZE,
+                .flags  =       MEMTYPE_FLAGS_FIXED,
+        },
+        [MEMTYPE_EBI0] = {
+                .flags  =       MEMTYPE_FLAGS_1M_ALIGN,
+        },
+        [MEMTYPE_EBI1] = {
+                .flags  =       MEMTYPE_FLAGS_1M_ALIGN,
+        },
 };
 
 
