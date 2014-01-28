@@ -22,32 +22,70 @@
 #include <linux/syscalls.h>
 
 #include <linux/irq.h>
+#include <asm/cacheflush.h>
 #include <asm/system.h>
 
 #define fb_width(fb)	((fb)->var.xres)
 #define fb_height(fb)	((fb)->var.yres)
-#define fb_size(fb)	((fb)->var.xres * (fb)->var.yres * 3)
+#define fb_size(fb)	((fb)->var.xres * (fb)->var.yres * 2)
 
-static void memset16(void *_ptr, unsigned short val, unsigned count)
+/* convert RGB565 to RBG8888 */
+static int total_pixel = 1;
+static int memset16_rgb8888(void *_ptr, unsigned short val, unsigned count,
+				struct fb_info *fb)
 {
 	unsigned short *ptr = _ptr;
+	unsigned short red;
+	unsigned short green;
+	unsigned short blue;
+	int need_align = (fb->fix.line_length >> 2) - fb->var.xres;
+	int align_amount = need_align << 1;
+	int pad = 0;
+
+	red = (val & 0xF800) >> 8;
+	green = (val & 0x7E0) >> 3;
+	blue = (val & 0x1F) << 3;
+
 	count >>= 1;
-	while (count--)
-		*ptr++ = val;
+	while (count--) {
+		*ptr++ = (green << 8) | red;
+		*ptr++ = blue;
+
+		if (need_align) {
+			if (!(total_pixel % fb->var.xres)) {
+				ptr += align_amount;
+				pad++;
+			}
+		}
+
+		total_pixel++;
+	}
+
+	return pad * align_amount;
 }
 
 /* 565RLE image format: [count(2 bytes), rle(2 bytes)] */
-int load_565rle_image(char *filename)
+int load_565rle_image(char *filename, bool bf_supported)
 {
 	struct fb_info *info;
-	int fd, err = 0;
-	unsigned count, max;
+	int fd, count, err = 0;
+	unsigned max;
 	unsigned short *data, *bits, *ptr;
+	struct module *owner;
+	int pad;
 
 	info = registered_fb[0];
 	if (!info) {
 		printk(KERN_WARNING "%s: Can not access framebuffer\n",
 			__func__);
+		return -ENODEV;
+	}
+
+	owner = info->fbops->owner;
+	if (!try_module_get(owner))
+		return -ENODEV;
+	if (info->fbops->fb_open && info->fbops->fb_open(info, 0)) {
+		module_put(owner);
 		return -ENODEV;
 	}
 
@@ -57,9 +95,8 @@ int load_565rle_image(char *filename)
 			__func__, filename);
 		return -ENOENT;
 	}
-	count = (unsigned)sys_lseek(fd, (off_t)0, 2);
-	if (count == 0) {
-		sys_close(fd);
+	count = sys_lseek(fd, (off_t)0, 2);
+	if (count <= 0) {
 		err = -EIO;
 		goto err_logo_close_file;
 	}
@@ -70,24 +107,36 @@ int load_565rle_image(char *filename)
 		err = -ENOMEM;
 		goto err_logo_close_file;
 	}
-	if ((unsigned)sys_read(fd, (char *)data, count) != count) {
+	if (sys_read(fd, (char *)data, count) != count) {
 		err = -EIO;
 		goto err_logo_free_data;
 	}
 
 	max = fb_width(info) * fb_height(info);
 	ptr = data;
-	bits = (unsigned short *)(info->screen_base);
-	while (count > 3) {
-		unsigned n = ptr[0];
-		if (n > max)
-			break;
-		memset16(bits, ptr[1], n << 1);
-		bits += n;
-		max -= n;
-		ptr += 2;
-		count -= 4;
+	if (bf_supported && (info->node == 1 || info->node == 2)) {
+		err = -EPERM;
+		pr_err("%s:%d no info->creen_base on fb%d!\n",
+		       __func__, __LINE__, info->node);
+		goto err_logo_free_data;
 	}
+	if (info->screen_base) {
+		bits = (unsigned short *)(info->screen_base);
+		while (count > 3) {
+			unsigned n = ptr[0];
+			if (n > max)
+				break;
+			pad = memset16_rgb8888(bits, ptr[1], n << 1, info);
+			bits += n << 1;
+			bits += pad;
+			max -= n;
+			ptr += 2;
+			count -= 4;
+		}
+	}
+
+	flush_cache_all();
+	outer_flush_all();
 
 err_logo_free_data:
 	kfree(data);
@@ -96,4 +145,3 @@ err_logo_close_file:
 	return err;
 }
 EXPORT_SYMBOL(load_565rle_image);
-

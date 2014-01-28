@@ -151,7 +151,7 @@ struct kgsl_version {
 #define KGSL_2D1_REG_MEMORY	"kgsl_2d1_reg_memory"
 #define KGSL_2D1_IRQ		"kgsl_2d1_irq"
 
-#ifdef CONFIG_MACH_ES209RA
+/*#ifdef CONFIG_MACH_ES209RA
 struct kgsl_grp_clk_name {
 	const char *clk;
 	const char *pclk;
@@ -170,9 +170,10 @@ struct kgsl_clk_data {
 	struct kgsl_grp_clk_name name;
 	struct msm_bus_scale_pdata *bus_scale_table;
 };
-#endif
+#endif*/
 
 struct kgsl_device_platform_data {
+#if 0
 #ifdef CONFIG_MACH_ES209RA
 	struct kgsl_device_pwr_data pwr_data;
 	struct kgsl_clk_data clk;
@@ -180,6 +181,7 @@ struct kgsl_device_platform_data {
 	struct kgsl_grp_clk_name imem_clk_name;
 	/*const char *iommu_user_ctx_name;
 	const char *iommu_priv_ctx_name;*/
+#endif
 #endif
 	struct kgsl_pwrlevel pwrlevel[KGSL_MAX_PWRLEVELS];
 	int init_level;
@@ -251,7 +253,6 @@ struct kgsl_device_waittimestamp {
 
 #define IOCTL_KGSL_DEVICE_WAITTIMESTAMP \
 	_IOW(KGSL_IOC_TYPE, 0x6, struct kgsl_device_waittimestamp)
-
 
 /* issue indirect commands to the GPU.
  * drawctxt_id must have been created with IOCTL_KGSL_DRAWCTXT_CREATE

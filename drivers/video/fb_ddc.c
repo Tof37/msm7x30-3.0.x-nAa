@@ -1,5 +1,5 @@
 /*
- * driver/vide/fb_ddc.c - DDC/EDID read support.
+ * drivers/video/fb_ddc.c - DDC/EDID read support.
  *
  *  Copyright (C) 2006 Dennis Munsie <dmunsie@cecropia.com>
  *
