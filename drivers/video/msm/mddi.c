@@ -182,9 +182,6 @@ void pmdh_clk_enable()
 		irq_enabled = 1;
 	}
 
-	if (mddi_host_timer.function)
-		mddi_host_timer_service(0);
-
 	mutex_unlock(&pmdh_clk_lock);
 }
 
@@ -496,6 +493,8 @@ static int mddi_resume(struct platform_device *pdev)
 
 	mddi_host_reg_out(PAD_CTL, mddi_pad_ctrl);
 
+	if (mddi_host_timer.function)
+		mddi_host_timer_service(0);
 
 	return 0;
 }
