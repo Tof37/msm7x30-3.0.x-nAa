@@ -108,9 +108,14 @@
 
 #define SMEM_SPINLOCK_I2C	"S:6"
 
-#define MSM_PMEM_MDP_SIZE	0x1C91000
+#define MSM_PMEM_MDP_BASE       (MSM_PMEM_GPU0_BASE + MSM_PMEM_GPU0_SIZE)
+#define MSM_PMEM_MDP_SIZE       0x3000000
+#define MSM_PMEM_ADSP_BASE      (MSM_PMEM_MDP_BASE + MSM_PMEM_MDP_SIZE)
+#define MSM_PMEM_ADSP_SIZE      0x3000000
 
-#define MSM_PMEM_ADSP_SIZE	0x2196000
+/*#define MSM_PMEM_MDP_SIZE	0x1C91000
+
+#define MSM_PMEM_ADSP_SIZE	0x2196000*/
 
 #define MSM_PMEM_AUDIO_SIZE	0x80000
 
@@ -121,7 +126,7 @@
 #define MSM_EBI1_BANK0_SIZE	0x0E800000
 
 #define MSM_EBI1_BANK1_BASE 	0x30000000
-#define MSM_EBI1_BANK1_SIZE	0x0B700000
+#define MSM_EBI1_BANK1_SIZE	0x0C900000
 
 #define MSM_SHARED_RAM_PHYS	0x00100000
 
@@ -139,10 +144,8 @@
 #define MSM_FB_NUM  2
 #endif
 
-
-
 #define MSM_PMEM_GPU0_BASE	0x00000000
-#define MSM_PMEM_GPU0_SIZE	SZ_2M
+#define MSM_PMEM_GPU0_SIZE	SZ_4M
 
 #define MSM_PMEM_SMIPOOL_BASE	(MSM_FB_BASE + MSM_FB_SIZE)
 #define MSM_PMEM_SMIPOOL_SIZE	(MSM_PMEM_SMI_SIZE - MSM_FB_SIZE)
@@ -830,7 +833,7 @@ static void __init msm_mddi_tmd_fwvga_display_device_init(void)
 	panel_data->panel_info.clk_max =  192000000;
 	panel_data->panel_info.fb_num = MSM_FB_NUM;
 	panel_data->panel_info.mddi.vdopkt = MDDI_DEFAULT_PRIM_PIX_ATTR;
-	panel_data->panel_info.lcd.vsync_enable = FALSE;
+	panel_data->panel_info.lcd.vsync_enable = TRUE;
 	panel_data->panel_info.lcd.v_back_porch = 12;
 	panel_data->panel_info.lcd.v_front_porch = 2;
 	panel_data->panel_info.lcd.v_pulse_width = 0;

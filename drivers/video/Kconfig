@@ -2579,6 +2579,10 @@ endchoice
 
 endif
 
+config FB_MDDI_DISABLE_REVERSE
+   	bool "DISABLE REVERSE"
+   	default n
+
 config FB_MX3
        tristate "MX3 Framebuffer support"
        depends on FB && MX3_IPU
