@@ -111,16 +111,21 @@
 
 #define SMEM_SPINLOCK_I2C	"S:6"
 
-#define MSM_PMEM_MDP_SIZE	0x1C91000
+#define MSM_PMEM_MDP_BASE       (MSM_PMEM_GPU0_BASE + MSM_PMEM_GPU0_SIZE)
+#define MSM_PMEM_MDP_SIZE       0x2000000
+#define MSM_PMEM_ADSP_BASE      (MSM_PMEM_MDP_BASE + MSM_PMEM_MDP_SIZE)
+#define MSM_PMEM_ADSP_SIZE      0x3000000
 
-#define MSM_PMEM_ADSP_SIZE	0x2196000
+/*#define MSM_PMEM_MDP_SIZE	0x1C91000
+
+#define MSM_PMEM_ADSP_SIZE	0x2196000*/
 #define PMEM_KERNEL_EBI1_SIZE	0x00028000
 
 #define MSM_EBI1_BANK0_BASE	0x20000000
 #define MSM_EBI1_BANK0_SIZE	0x0E800000
 
 #define MSM_EBI1_BANK1_BASE 	0x30000000
-#define MSM_EBI1_BANK1_SIZE	0x10000000
+#define MSM_EBI1_BANK1_SIZE	0x0C200000
 
 #define MSM_SHARED_RAM_PHYS	0x00100000
 
@@ -132,7 +137,7 @@
 #define MSM_FB_BASE		MSM_PMEM_SMI_BASE
 
 #define MSM_PMEM_GPU0_BASE	0x00000000
-#define MSM_PMEM_GPU0_SIZE	SZ_2M
+#define MSM_PMEM_GPU0_SIZE	SZ_4M
 
 /*#define MSM_PMEM_SMIPOOL_BASE	(MSM_FB_BASE + MSM_FB_SIZE)
 #define MSM_PMEM_SMIPOOL_SIZE	(MSM_PMEM_SMI_SIZE - MSM_FB_SIZE)*/
@@ -144,10 +149,10 @@
 #define PMIC_VREG_GP6_LEVEL	2850
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-#define MSM_FB_SIZE     0x600000
+#define MSM_FB_SIZE     0x672000
 #define MSM_FB_NUM  3
 #else
-#define MSM_FB_SIZE     0x278780
+#define MSM_FB_SIZE     0x400000
 #define MSM_FB_NUM  2        
 #endif
 #define FPGA_SDCC_STATUS	0x70000280
@@ -2394,6 +2399,25 @@ static int __init pmem_audio_size_setup(char *p)
 }
 early_param("pmem_audio_size", pmem_audio_size_setup);
 
+///////////////////////////////////////////////////////////////////////
+// Power_rail mode
+///////////////////////////////////////////////////////////////////////
+static int es209ra_kgsl_power_rail_mode(int follow_clk)
+{
+        int mode = follow_clk ? 0 : 1;
+        int rail_id = 0;
+        return msm_proc_comm(PCOM_CLK_REGIME_SEC_RAIL_CONTROL, &rail_id, &mode);
+}
+
+static int es209ra_kgsl_power(bool on)
+{
+        int cmd;
+        int rail_id = 0;
+
+            cmd = on ? PCOM_CLK_REGIME_SEC_RAIL_ENABLE : PCOM_CLK_REGIME_SEC_RAIL_DISABLE;
+            return msm_proc_comm(cmd, &rail_id, 0);
+}
+
 /* SEMC:SYS: Get startup reason - start */
 unsigned int es209ra_startup_reason = 0;
 
@@ -2461,6 +2485,12 @@ static void __init es209ra_init(void)
 	spi_register_board_info(msm_spi_board_info,
 				ARRAY_SIZE(msm_spi_board_info));
 	msm_pm_set_platform_data(msm_pm_data, ARRAY_SIZE(msm_pm_data));
+	/* set the gpu power rail to manual mode so clk en/dis will not
+         * turn off gpu power, and hang it on resume */
+        es209ra_kgsl_power_rail_mode(0);
+        es209ra_kgsl_power(false);
+        mdelay(100);
+        es209ra_kgsl_power(true);
 	platform_device_register(&es209ra_keypad_device);
 	msm_mddi_tmd_fwvga_display_device_init();
 }
