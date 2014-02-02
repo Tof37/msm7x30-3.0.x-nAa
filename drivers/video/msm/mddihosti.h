@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2010, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2010, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -449,11 +449,7 @@ typedef struct {
 #ifdef ENABLE_MDDI_MULTI_READ_WRITE
 #define MDDI_LLIST_POOL_SIZE 0x10000
 #else
-#ifdef CONFIG_SEMC_PLATFORM
 #define MDDI_LLIST_POOL_SIZE 0x8000
-#else
-#define MDDI_LLIST_POOL_SIZE 0x1000
-#endif
 #endif
 #define MDDI_MAX_NUM_LLIST_ITEMS (MDDI_LLIST_POOL_SIZE / \
 		 sizeof(mddi_linked_list_type))

@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2009, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -130,8 +130,11 @@ typedef struct {
 } mddi_lcd_func_type;
 
 extern mddi_lcd_func_type mddi_lcd;
-void mddi_init(void);
+extern int irq_enabled;
+extern unsigned char mddi_timer_shutdown_flag;
+extern struct mutex mddi_timer_lock;
 
+void mddi_init(void);
 void mddi_powerdown(void);
 
 void mddi_host_start_ext_display(void);

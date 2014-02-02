@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2009, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2009, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -107,7 +107,7 @@ void mddi_init(void)
 
 	mddi_host_initialized = TRUE;
 
-	init_MUTEX(&mddi_host_mutex);
+	sema_init(&mddi_host_mutex, 1);
 
 	if (!mddi_host_powered) {
 		down(&mddi_host_mutex);
@@ -397,7 +397,7 @@ int mddi_host_register_write(uint32 reg_addr,
 		mddi_linked_list_notify_type *llist_notify_ptr;
 		llist_notify_ptr = &llist_extern_notify[host][curr_llist_idx];
 		wait_ret = wait_for_completion_timeout(
-					&(llist_notify_ptr->done_comp), HZ / 5);
+					&(llist_notify_ptr->done_comp), HZ/5);
 
 		if (wait_ret <= 0)
 			ret = -EBUSY;

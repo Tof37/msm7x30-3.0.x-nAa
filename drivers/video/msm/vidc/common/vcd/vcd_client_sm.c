@@ -1,4 +1,4 @@
-/* Copyright (c) 2010-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2010-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -213,11 +213,11 @@ static u32 vcd_decode_frame_cmn
 	return vcd_handle_input_frame(cctxt, input_frame);
 }
 
-static u32 vcd_pause_cmn(struct vcd_clnt_ctxt *cctxt)
+static u32 vcd_pause_in_run(struct vcd_clnt_ctxt *cctxt)
 {
 	u32 rc = VCD_S_SUCCESS;
 
-	VCD_MSG_LOW("vcd_pause_cmn:");
+	VCD_MSG_LOW("vcd_pause_in_run:");
 
 	if (cctxt->sched_clnt_hdl) {
 		rc = vcd_sched_suspend_resume_clnt(cctxt, false);
@@ -503,7 +503,7 @@ static u32 vcd_set_property_cmn
 
 	rc = ddl_set_property(cctxt->ddl_handle, prop_hdr, prop_val);
 	if (rc) {
-		
+		/* Some properties aren't known to ddl that we can handle */
 		if (prop_hdr->prop_id != VCD_I_VOP_TIMING_CONSTANT_DELTA)
 			VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
 	}
@@ -543,34 +543,35 @@ static u32 vcd_set_property_cmn
 		}
 	case VCD_I_SET_TURBO_CLK:
 	{
-        rc = vcd_set_perf_turbo_level(cctxt);
+		if (cctxt->sched_clnt_hdl)
+			rc = vcd_set_perf_turbo_level(cctxt);
 		break;
 	}
 	case VCD_I_INTRA_PERIOD:
-		{
-			struct vcd_property_i_period *iperiod =
-				(struct vcd_property_i_period *)prop_val;
-			cctxt->bframe = iperiod->b_frames;
-			break;
-		}
+	   {
+		  struct vcd_property_i_period *iperiod =
+			 (struct vcd_property_i_period *)prop_val;
+		  cctxt->bframe = iperiod->b_frames;
+		  break;
+	   }
+	case VCD_I_VOP_TIMING_CONSTANT_DELTA:
+	   {
+		   struct vcd_property_vop_timing_constant_delta *delta =
+			   (struct vcd_property_vop_timing_constant_delta *)
+			   prop_val;
+		   if (delta->constant_delta > 0) {
+			cctxt->time_frame_delta = delta->constant_delta;
+			rc = VCD_S_SUCCESS;
+		   } else {
+			VCD_MSG_ERROR("Frame delta must be positive");
+			rc = VCD_ERR_ILLEGAL_PARM;
+		   }
+		   break;
+	   }
 	case VCD_REQ_PERF_LEVEL:
 		rc = vcd_req_perf_level(cctxt,
-				(struct vcd_property_perf_level *)prop_val);
+			(struct vcd_property_perf_level *)prop_val);
 		break;
-	case VCD_I_VOP_TIMING_CONSTANT_DELTA:
-		{
-			struct vcd_property_vop_timing_constant_delta *delta =
-				prop_val;
-
-			if (delta->constant_delta > 0) {
-				cctxt->time_frame_delta = delta->constant_delta;
-				rc = VCD_S_SUCCESS;
-			} else {
-				VCD_MSG_ERROR("Frame delta must be positive");
-				rc = VCD_ERR_ILLEGAL_PARM;
-			}
-			break;
-		}
 	default:
 		{
 			break;
@@ -593,7 +594,7 @@ static u32 vcd_get_property_cmn
 	}
 	rc = ddl_get_property(cctxt->ddl_handle, prop_hdr, prop_val);
 	if (rc) {
-		
+		/* Some properties aren't known to ddl that we can handle */
 		if (prop_hdr->prop_id != VCD_I_VOP_TIMING_CONSTANT_DELTA)
 			VCD_FAILED_RETURN(rc, "Failed: ddl_set_property");
 	}
@@ -1708,7 +1709,7 @@ static const struct vcd_clnt_state_table vcd_clnt_table_run = {
 	 vcd_encode_frame_cmn,
 	 vcd_decode_start_in_run,
 	 vcd_decode_frame_cmn,
-	 vcd_pause_cmn,
+	 vcd_pause_in_run,
 	 NULL,
 	 vcd_flush_cmn,
 	 vcd_stop_in_run,
@@ -1783,7 +1784,7 @@ static const struct vcd_clnt_state_table vcd_clnt_table_eos = {
 	 vcd_encode_frame_cmn,
 	 NULL,
 	 vcd_decode_frame_cmn,
-	 vcd_pause_cmn,
+	 NULL,
 	 NULL,
 	 vcd_flush_in_eos,
 	 vcd_stop_in_eos,
