@@ -24,7 +24,7 @@ menuconfig NET
 if NET
 
 config WANT_COMPAT_NETLINK_MESSAGES
-	bool
+	bool 
 	help
 	  This option can be selected by other options that need compat
 	  netlink messages.
@@ -350,14 +350,14 @@ endif
 # End compat-drivers
 #
 
-#if !COMPAT_WIRELESS
-#if WIRELESS
+if !COMPAT_WIRELESS
+if WIRELESS
 
-#source "net/wireless/Kconfig"
-#source "net/mac80211/Kconfig"
+source "net/wireless/Kconfig"
+source "net/mac80211/Kconfig"
 
-#endif # WIRELESS
-#endif #!COMPAT_WIRELESS
+endif # WIRELESS
+endif #!COMPAT_WIRELESS
 
 source "net/wimax/Kconfig"
 
@@ -365,6 +365,5 @@ source "net/rfkill/Kconfig"
 source "net/9p/Kconfig"
 source "net/caif/Kconfig"
 source "net/ceph/Kconfig"
-
 
 endif   # if NET

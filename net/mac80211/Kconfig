@@ -51,7 +51,7 @@ choice
 	  parameter if different algorithms are available.
 
 config MAC80211_RC_DEFAULT_PID
-	bool "PID controller based rate control algorithm"
+	bool
 	depends on MAC80211_RC_PID
 	---help---
 	  Select the PID controller based rate control as the
@@ -59,7 +59,7 @@ config MAC80211_RC_DEFAULT_PID
 	  this unless you know what you are doing.
 
 config MAC80211_RC_DEFAULT_MINSTREL
-	bool "Minstrel"
+	bool
 	depends on MAC80211_RC_MINSTREL
 	---help---
 	  Select Minstrel as the default rate control algorithm.
