@@ -11,19 +11,32 @@ config FB_MSM
 	  Support for MSM Framebuffer.
 
 if FB_MSM
+
 choice
-	prompt "Default framebuffer color depth"
-	depends on FB_MSM_MDP40 || FB_MSM_MDP31 || FB_MSM_MDP303
-	default FB_MSM_DEFAULT_DEPTH_RGBA8888
+	prompt "Choose display bpp for nt35580 video drivers"
+	depends on FB_MSM_MDDI_TMD_NT35580
+	default NT35580_16_BPP
+
+config NT35580_16_BPP
+	bool "NT35580 16 bpp display"
+	select FB_MSM_DEFAULT_DEPTH_RGB565
+
+config NT35580_32_BPP
+	bool "NT35580 16 bpp display"
+	select FB_MSM_DEFAULT_DEPTH_RGBA8888
+
+endchoice
 
 config FB_MSM_DEFAULT_DEPTH_RGB565
 	bool "16 bits per pixel (RGB565)"
+	depends on FB_MSM_MDP40 || FB_MSM_MDP31 || FB_MSM_MDP303
 
 config FB_MSM_DEFAULT_DEPTH_ARGB8888
 	bool "32 bits per pixel (ARGB8888)"
+	depends on FB_MSM_MDP40 || FB_MSM_MDP31 || FB_MSM_MDP303
 
 config FB_MSM_DEFAULT_DEPTH_RGBA8888
 	bool "32 bits per pixel (RGBA8888)"
+	depends on FB_MSM_MDP40 || FB_MSM_MDP31 || FB_MSM_MDP303
 
-endchoice
 endif
