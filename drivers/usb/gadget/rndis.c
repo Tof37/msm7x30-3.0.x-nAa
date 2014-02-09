@@ -161,11 +161,9 @@ static const u32 oid_supported_list[] =
 
 /* HACK: copied from net/core/dev.c to replace dev_get_stats since
  * dev_get_stats cannot be called from atomic context */
-
 static void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
 				    const struct net_device_stats *netdev_stats)
 {
-
 #if BITS_PER_LONG == 64
 	BUILD_BUG_ON(sizeof(*stats64) != sizeof(*netdev_stats));
 	memcpy(stats64, netdev_stats, sizeof(*stats64));
@@ -179,7 +177,6 @@ static void netdev_stats_to_stats64(struct rtnl_link_stats64 *stats64,
 	for (i = 0; i < n; i++)
 		dst[i] = src[i];
 #endif
-
 }
 
 /* NDIS Functions */
@@ -608,12 +605,12 @@ static int rndis_init_response(int configNr, rndis_init_msg_type *buf)
 	resp->MinorVersion = cpu_to_le32(RNDIS_MINOR_VERSION);
 	resp->DeviceFlags = cpu_to_le32(RNDIS_DF_CONNECTIONLESS);
 	resp->Medium = cpu_to_le32(RNDIS_MEDIUM_802_3);
-	resp->MaxPacketsPerTransfer = cpu_to_le32(1);
-	resp->MaxTransferSize = cpu_to_le32(
-		  params->dev->mtu
+	resp->MaxPacketsPerTransfer = cpu_to_le32(TX_SKB_HOLD_THRESHOLD);
+	resp->MaxTransferSize = cpu_to_le32(TX_SKB_HOLD_THRESHOLD *
+		(params->dev->mtu
 		+ sizeof(struct ethhdr)
 		+ sizeof(struct rndis_packet_msg_type)
-		+ 22);
+		+ 22));
 	resp->PacketAlignmentFactor = cpu_to_le32(0);
 	resp->AFListOffset = cpu_to_le32(0);
 	resp->AFListSize = cpu_to_le32(0);

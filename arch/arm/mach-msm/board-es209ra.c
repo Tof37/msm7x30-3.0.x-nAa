@@ -28,7 +28,7 @@
 #include <linux/mfd/tps65023.h>
 #include <linux/power_supply.h>
 #include <linux/clk.h>
-#include <linux/usb/mass_storage_function.h> 
+//#include <linux/usb/mass_storage_function.h> 
 
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
@@ -74,7 +74,7 @@
 #include "cpufreq.h"
 #include "acpuclock.h"
 #include <linux/msm_kgsl.h>
-#ifdef CONFIG_USB_ANDROID
+#ifdef CONFIG_USB_G_ANDROID
 #include <linux/usb/android_composite.h>
 #endif
 #include <linux/usb/android.h>
@@ -137,7 +137,7 @@
 
 #define MSM_FB_BASE		MSM_PMEM_SMI_BASE
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-#define MSM_FB_SIZE     0x672000
+#define MSM_FB_SIZE     0x500000
 #define MSM_FB_NUM  3
 #else
 #define MSM_FB_SIZE     0x400000
@@ -213,7 +213,7 @@ static struct platform_device ram_console_device = {
 	.dev = { .platform_data=0,}
 };
 
-static struct usb_mass_storage_platform_data mass_storage_pdata = {
+static struct usb_mass_storage_platform_data usb_mass_storage_pdata = {
 	.nluns   = 1,
 	.vendor	 = "SEMC",
 	.product = "Mass Storage",
@@ -225,7 +225,7 @@ static struct platform_device usb_mass_storage_device = {
         .name = "usb_mass_storage",
         .id = -1,
         .dev = {
-                .platform_data = &mass_storage_pdata,
+                .platform_data          = &usb_mass_storage_pdata,
                 },
 };
 
@@ -242,15 +242,61 @@ static struct platform_device rndis_device = {
 		.platform_data = &rndis_pdata,
 	},
 };
-#ifdef CONFIG_USB_ANDROID
-/* dynamic composition */
+#ifdef CONFIG_USB_G_ANDROID
+static char *usb_functions_default[] = {
+	"diag",
+	"modem",
+	"nmea",
+	"rmnet",
+	"usb_mass_storage",
+};
+
+static char *usb_functions_default_adb[] = {
+	"diag",
+	"adb",
+	"modem",
+	"nmea",
+	"rmnet",
+	"usb_mass_storage",
+};
+
+static char *usb_functions_rndis[] = {
+	"rndis",
+};
+
+static char *usb_functions_rndis_adb[] = {
+	"rndis",
+	"adb",
+};
+
+static char *usb_functions_all[] = {
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
+#ifdef CONFIG_USB_ANDROID_DIAG
+	"diag",
+#endif
+	"adb",
+#ifdef CONFIG_USB_F_SERIAL
+	"modem",
+	"nmea",
+#endif
+#ifdef CONFIG_USB_ANDROID_RMNET
+	"rmnet",
+#endif
+	"usb_mass_storage",
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
+};
+/* dynamic composition 
 static char *usb_func_msc[] = {
 	"usb_mass_storage",
 };
 static char *usb_func_msc_adb[] = {
 	"usb_mass_storage",
 	"adb",
-};
+};*/
 
 static char *usb_func_msc_adb_eng[] = {
 	"usb_mass_storage",
@@ -259,7 +305,7 @@ static char *usb_func_msc_adb_eng[] = {
 	"nmea",
 	"diag",
 };
-
+/*
 #if defined(CONFIG_USB_ANDROID_MTP_ARICENT)
 static char *usb_functions_mtp[] = {
 	"mtp",
@@ -291,7 +337,7 @@ static char *usb_func_rndis[] = {
 static char *usb_func_adb_rndis[] = {
 	"rndis",
 	"adb",
-};
+};*/
 
 static char *usb_functions_diag[] = {
 	"adb",
@@ -299,7 +345,7 @@ static char *usb_functions_diag[] = {
 	"diag",
 };
 
-static char *usb_functions_all[] = {
+/*static char *usb_functions_all[] = {
 	"rndis",
 	"usb_mass_storage",
 #if defined(CONFIG_USB_ANDROID_MTP_ARICENT)
@@ -309,57 +355,34 @@ static char *usb_functions_all[] = {
 	"modem",
 	"nmea",
 	"diag",
-};
+};*/
+
 static struct android_usb_product android_usb_products[] = {
 	{
 		.product_id = 0xE12E,
-		.functions = usb_func_msc,
-		.num_functions = ARRAY_SIZE(usb_func_msc),
+		.num_functions	= ARRAY_SIZE(usb_functions_default),
+		.functions	= usb_functions_default,
 	},
 	{
 		.product_id = 0x612E,
-		.functions = usb_func_msc_adb,
-		.num_functions = ARRAY_SIZE(usb_func_msc_adb),
+		.num_functions	= ARRAY_SIZE(usb_functions_default_adb),
+		.functions	= usb_functions_default_adb,
 	},
-#if defined(CONFIG_USB_ANDROID_MTP_ARICENT)
-	{
-		.product_id	= 0x0000 | CONFIG_USB_PRODUCT_SUFFIX,
-		.num_functions	= ARRAY_SIZE(usb_functions_mtp),
-		.functions	= usb_functions_mtp,
-	},
-	{
-		.product_id	= 0x512E | CONFIG_USB_PRODUCT_SUFFIX,
-		.num_functions	= ARRAY_SIZE(usb_functions_mtp_adb),
-		.functions	= usb_functions_mtp_adb,
-	},
-	{
-		.product_id	= 0x412E | CONFIG_USB_PRODUCT_SUFFIX,
-		.num_functions	= ARRAY_SIZE(usb_functions_mtp_msc),
-		.functions	= usb_functions_mtp_msc,
-	},
-#endif
 	{
 		.product_id = 0x712E,
-		.functions = usb_func_rndis,
-		.num_functions = ARRAY_SIZE(usb_func_rndis),
+		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
+		.functions	= usb_functions_rndis,
 	},
 	{
 		.product_id = 0x812E,
-		.functions = usb_func_adb_rndis,
-		.num_functions = ARRAY_SIZE(usb_func_adb_rndis),
+		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
+		.functions	= usb_functions_rndis_adb,
 	},
 	{
 		.product_id	= 0x912E,
 		.functions	= usb_functions_diag,
 		.num_functions	= ARRAY_SIZE(usb_functions_diag),
 	},
-#if defined(CONFIG_USB_ANDROID_MTP_ARICENT)
-	{
-		.product_id	= 0x5146,
-		.num_functions	= ARRAY_SIZE(usb_functions_mtp_adb_eng),
-		.functions	= usb_functions_mtp_adb_eng,
-	},
-#endif
 	{
 		.product_id = 0x6146,
 		.functions = usb_func_msc_adb_eng,
@@ -1459,7 +1482,7 @@ static struct msm_camera_device_platform_data msm_camera_device_data = {
 
 static struct msm_camera_sensor_flash_src msm_flash_src = {
 	.flash_sr_type = MSM_CAMERA_FLASH_SRC_PMIC,
-	._fsrc.pmic_src.num_of_src = 1,
+	//._fsrc.pmic_src.num_of_src = 1,
 	._fsrc.pmic_src.low_current  = 30,
 	._fsrc.pmic_src.high_current = 100,
 	//._fsrc.pmic_src.led_src_1 = 0,
@@ -1615,7 +1638,7 @@ static struct platform_device *devices[] __initdata = {
 	&qsd_device_spi,
 	&usb_mass_storage_device,
 	&rndis_device,
-#ifdef CONFIG_USB_ANDROID
+#ifdef CONFIG_USB_G_ANDROID
 	&android_usb_device,
 #endif
 	&msm_device_tssc,
@@ -2394,7 +2417,7 @@ static void __init es209ra_init_early(void)
 
 static int __init board_serialno_setup(char *serialno)
 {
-#ifdef CONFIG_USB_ANDROID
+#ifdef CONFIG_USB_G_ANDROID
 	int i;
 	char *src = serialno;
 	android_usb_pdata.serial_number = serialno;
